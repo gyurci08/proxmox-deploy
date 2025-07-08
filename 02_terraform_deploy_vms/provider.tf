@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    proxmox = {
+      source  = "telmate/proxmox"
+      version = ">= 2.9.6"
+    }
+  }
+}
+
 provider "proxmox" {
   pm_api_url          = "https://jgy-dev-proxmox.tatooine.jgy.local:8006/api2/json"
   pm_api_token_id     = var.pm_api_token_id
