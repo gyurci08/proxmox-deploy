@@ -5,11 +5,19 @@ resource "proxmox_vm_qemu" "test-1" {
   cores       = 2
   memory      = 2048
   os_type     = "Linux"
-  storage     = "local-lvm"
+
+  disk {
+    storage = "local-lvm"
+    size    = "10G"
+    type    = "virtio"
+    backup  = true
+  }
+
   network {
     model  = "virtio"
     bridge = "vmbr0"
   }
+
   ipconfig0 = "ip=10.0.1.140/24,gw=10.0.1.254"
-  sshkeys   = var.ssh_public_key
+  sshkeys   = var.vm_ssh_public_key
 }
