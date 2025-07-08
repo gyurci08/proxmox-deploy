@@ -70,10 +70,12 @@
             name: libguestfs-tools
             state: present
             update_cache: yes
-          register: APT_RESULT
-          until: APT_RESULT is success
-          retries: 3
-          delay: 5
+
+        - name: Install proxmoxer
+          ansible.builtin.apt:
+            name: python3-proxmoxer
+            state: present
+            update_cache: yes
 
     - name: Prepare cloud image
       block:

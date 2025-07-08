@@ -65,9 +65,9 @@
         state: directory
         mode: '0755'
 
-    - name: Ensure libguestfs-tools is installed
+    - name: Install proxmoxer
       ansible.builtin.apt:
-        name: libguestfs-tools
+        name: python3-proxmoxer
         state: present
         update_cache: yes
 

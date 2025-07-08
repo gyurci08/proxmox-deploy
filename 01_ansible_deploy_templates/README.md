@@ -6,8 +6,8 @@
 `VAR_ROLE=Robot`
 
 ```bash
-VAR_USER=robot
-VAR_ROLE=Robot
+VAR_USER=automation
+VAR_ROLE=Automation
 pveum role add ${VAR_ROLE} -privs "
 VM.Allocate,
 VM.Clone,
