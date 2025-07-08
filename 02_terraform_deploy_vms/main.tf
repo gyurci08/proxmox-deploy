@@ -36,6 +36,6 @@ resource "proxmox_vm_qemu" "tst-1" {
   }
 
   agent     = 1
-  ipconfig0 = "ip=dhcp"
+  ipconfig0 = "ip=10.0.1.140/24,gw=10.0.1.254"
   sshkeys   = var.vm_ssh_public_key
 }
