@@ -1,0 +1,7 @@
+VERSION: "noble"
+ARCHITECTURE: "amd64"
+IMAGE_URL: "https://cloud-images.ubuntu.com/{{ VERSION }}/current/{{ VERSION }}-server-cloudimg-{{ ARCHITECTURE }}.img"
+DESTINATION_PATH: "/var/lib/vz/template/iso/ubuntu-{{ VERSION }}-{{ ARCHITECTURE }}-cloudimg.img"
+PACKAGE_MANAGER: "apt"
+PACKAGE_UPDATE_COMMAND: "apt update"
+PACKAGE_UPGRADE_COMMAND: "apt upgrade -y"

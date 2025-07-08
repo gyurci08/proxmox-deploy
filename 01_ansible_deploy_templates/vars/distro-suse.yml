@@ -1,0 +1,7 @@
+VERSION: "Leap-15.6"
+ARCHITECTURE: "x86_64"
+IMAGE_URL: "https://download.opensuse.org/repositories/Cloud:/Images:/Leap_15.6/images/openSUSE-{{ VERSION }}.{{ ARCHITECTURE }}-NoCloud.qcow2"
+DESTINATION_PATH: "/var/lib/vz/template/iso/suse-{{ VERSION }}-{{ ARCHITECTURE }}-cloudimg.img"
+PACKAGE_MANAGER: "zypper"
+PACKAGE_UPDATE_COMMAND: "zypper refresh"
+PACKAGE_UPGRADE_COMMAND: "zypper update -y"
