@@ -196,7 +196,7 @@
               net0: "virtio,bridge={{ GUEST.VM_BRIDGE }},firewall=1"
             scsihw: "virtio-scsi-pci"
             ide:
-              ide0: "{{ STORAGE_POOL }}:cloudinit"
+              ide0: "{{ STORAGE_POOL }}:cloudinit,media=cdrom,size=4M"
             agent: 1
             serial:
               serial0: socket
