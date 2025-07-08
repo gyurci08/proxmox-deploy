@@ -1,23 +1,41 @@
-resource "proxmox_vm_qemu" "test-1" {
-  name        = "test-1"
+resource "proxmox_vm_qemu" "tst-1" {
+  name        = "tst-1"
   target_node = "jgy-dev-proxmox"
   clone       = "template-suse-Leap-15.6"
-  cores       = 2
-  memory      = 2048
-  os_type     = "Linux"
+  os_type     = "cloud-init"
+  memory      = 1024
+
+  cpu {
+    cores = 2
+    type  = "host"
+  }
+
+  scsihw    = "virtio-scsi-pci"
+  bootdisk  = "virtio0"
 
   disk {
+    slot     = "virtio0"
+    storage  = "local-lvm"
+    size     = "10G"
+    type     = "disk"
+    iothread = true
+    discard  = true
+  }
+
+  disk {
+    slot    = "ide0"
     storage = "local-lvm"
-    size    = "10G"
-    type    = "virtio"
-    backup  = true
+    type    = "cloudinit"
   }
 
   network {
-    model  = "virtio"
-    bridge = "vmbr0"
+    id       = 0
+    model    = "virtio"
+    bridge   = "vmbr0"
+    firewall = true
   }
 
-  ipconfig0 = "ip=10.0.1.140/24,gw=10.0.1.254"
+  agent     = 1
+  ipconfig0 = "ip=dhcp"
   sshkeys   = var.vm_ssh_public_key
 }
