@@ -10,6 +10,11 @@ variable "pm_api_token_secret" {
   sensitive   = true
 }
 
+variable "vm_password" {
+  description = "Cloud-init user password"
+  type        = string
+  sensitive   = true
+}
 variable "vm_ssh_public_key" {
   description = "SSH public key a VM-hez"
   type        = string

@@ -122,60 +122,16 @@ provider "proxmox" {
 
 ### c. Variables (`variables.tf`)
 
-```hcl
-variable "pm_api_token_id" {
-  description = "Proxmox API token ID"
-  type        = string
-  sensitive   = true
-}
-
-variable "pm_api_token_secret" {
-  description = "Proxmox API token secret"
-  type        = string
-  sensitive   = true
-}
-
-variable "vm_ssh_public_key" {
-  description = "SSH public key for the VM"
-  type        = string
-}
-```
-
 ### d. Secrets (`secrets.auto.tfvars`)
 
 ```hcl
 pm_api_token_id     = "your_token_id"
 pm_api_token_secret = "your_token_secret"
+vm_password         = "secret_pass"
 vm_ssh_public_key   = "ssh-rsa AAAA..."
 ```
 
 ### e. Main Resource (`main.tf`)
-
-```hcl
-resource "proxmox_vm_qemu" "test-1" {
-  name        = "test-1"
-  target_node = "jgy-dev-proxmox"
-  clone       = "template-suse-Leap-15.6"
-  cores       = 2
-  memory      = 2048
-  os_type     = "cloud-init"
-
-  disk {
-    storage = "local-lvm"
-    size    = "10G"
-    type    = "virtio"
-    backup  = true
-  }
-
-  network {
-    model  = "virtio"
-    bridge = "vmbr0"
-  }
-
-  ipconfig0 = "ip=10.0.1.140/24,gw=10.0.1.254"
-  sshkeys   = var.vm_ssh_public_key
-}
-```
 
 ### f. Terraform Usage
 
@@ -204,5 +160,3 @@ resource "proxmox_vm_qemu" "test-1" {
 - Store sensitive data only in vaults or `.tfvars` files excluded from version control.
 - Use variables for all environment-specific values for flexibility.
 - Assign only the minimal necessary privileges to the robot user/token.
-
-This workflow ensures a clean, secure, and repeatable process for provisioning Proxmox VMs using Ansible for template preparation and Terraform for deployment.
