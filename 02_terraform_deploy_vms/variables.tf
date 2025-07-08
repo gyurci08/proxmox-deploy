@@ -9,3 +9,8 @@ variable "pm_api_token_secret" {
   type        = string
   sensitive   = true
 }
+
+variable "vm_ssh_public_key" {
+  description = "SSH public key a VM-hez"
+  type        = string
+}
