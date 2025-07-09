@@ -12,7 +12,7 @@ TIMEZONE: "Europe/Budapest"
 GUEST_DISTRIBUTION: "suse"   # Target distro: suse, ubuntu
 
 GUEST:
-  VM_VMID:        10001
+  VM_VMID:        10000
   VM_NAME:        "template-{{ GUEST_DISTRIBUTION }}-{{ VERSION }}"
   VM_MACHINE:     q35
   VM_CPU:         host
