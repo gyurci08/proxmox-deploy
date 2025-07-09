@@ -74,15 +74,32 @@ trap 'cleanup' EXIT
 
 load_config_yml() {
   local config_file="$1"
-  while IFS=$'\t' read -r key value; do
-    if [ -z "$key" ]; then
-      continue
+  # Use yq to get all top-level keys
+  local keys
+  IFS=$'\n' read -d '' -r -a keys < <(yq e 'keys | .[]' "$config_file" && printf '\0')
+  for key in "${keys[@]}"; do
+    # Special handling for SSH keys
+    if [[ "$key" == "CLOUD_INIT_SSH_PUBLIC_KEYS" ]]; then
+      # Try as multiline string
+      local value
+      value=$(yq -r ".${key}" "$config_file")
+      # If it's a YAML list, join with newlines
+      if yq e ".${key} | type" "$config_file" | grep -q '!!seq'; then
+        value=$(yq -r ".${key}[]" "$config_file" | sed ':a;N;$!ba;s/\n/\\n/g')
+        value="${value//\\n/
+}"
+      fi
+      export CLOUD_INIT_SSH_PUBLIC_KEYS="$value"
+      export TF_VAR_cloud_init_ssh_public_keys="$value"
+    else
+      # For other keys, export as usual
+      local value
+      value=$(yq -r ".${key}" "$config_file")
+      export "$key=$value"
+      local tf_key="TF_VAR_$(echo "$key" | tr '[:upper:]' '[:lower:]')"
+      export "$tf_key=$value"
     fi
-    # echo "$key=$value"
-    export "$key=$value"
-    tf_key="TF_VAR_$(echo "$key" | tr '[:upper:]' '[:lower:]')"
-    export "$tf_key=$value"
-  done < <(yq 'to_entries | .[] | [.key, .value] | @tsv' "$config_file")
+  done
 }
 
 run_ansible_playbook() {
@@ -124,7 +141,7 @@ validate_binaries
 log_info "Loading config from $CONFIG_FILE"
 load_config_yml "$CONFIG_FILE"
 log_info "Exported variables from $CONFIG_FILE: PROXMOX_NODE=$PROXMOX_NODE"
-
+printf '%s\n' "$CLOUD_INIT_SSH_PUBLIC_KEYS"
 run_ansible_playbook
 run_terraform_apply
 

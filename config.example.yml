@@ -15,3 +15,4 @@ CLOUD_INIT_SEARCHDOMAIN: "internal.local"
 CLOUD_INIT_NAMESERVER: "192.168.1.254"
 CLOUD_INIT_SSH_PUBLIC_KEYS: |
   ecdsa-sha2-nistp521 AAAA12345678rVw== user@user-pc
+  ecdsa-sha2-nistp521 AAAA12345678rVw== user2@use2-pc

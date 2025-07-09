@@ -1,192 +1,132 @@
-## Proxmox Automated Landscape Install
+# Proxmox Automated Landscape Install
 
-### 1. Robot User Configuration
+This project enables fully automated Proxmox VM deployment and management using a single command and a centralized configuration file. All environment-specific values are managed in `config.yml`, and the process is orchestrated via the `init.sh` script.
 
-*Variables*:  
-`VAR_USER=robot`  
-`VAR_ROLE=Robot`
+## 1. Prerequisites
 
-```bash
-VAR_USER=robot
-VAR_ROLE=Robot
-pveum role add ${VAR_ROLE} -privs "
-Datastore.AllocateSpace,
-Datastore.Audit,
-Pool.Allocate,
-SDN.Allocate,
-SDN.Audit,
-SDN.Use,
-Sys.Audit,
-Sys.Console,
-Sys.Modify,
-VM.Allocate,
-VM.Audit,
-VM.Clone,
-VM.Config.CDROM,
-VM.Config.CPU,
-VM.Config.Cloudinit,
-VM.Config.Disk,
-VM.Config.HWType,
-VM.Config.Memory,
-VM.Config.Network,
-VM.Config.Options,
-VM.Monitor,
-VM.Migrate,
-VM.PowerMgmt
-"
-useradd -m -s /bin/bash -G sudo ${VAR_USER} && pveum user add ${VAR_USER}@pam && passwd ${VAR_USER}
-pveum aclmod / -user ${VAR_USER}@pam -role ${VAR_ROLE}
-```
+### Proxmox User, Role, and API Token Setup
 
-### 2. Ansible Playbooks
+Before running the automation, you must create a dedicated Proxmox user, assign a custom role with the necessary privileges, and generate an API token. This ensures secure, least-privilege automation.
 
-**Vault Configuration**
+**Steps:**
 
-```bash
-ansible-vault create group_vars/all/vault.yml
-ansible-vault edit group_vars/all/vault.yml
-```
+1. **Create a Custom Role**  
+   Assign only the permissions required for VM management and automation:
+   ```bash
+   pveum role add RobotRole -privs "
+     Datastore.AllocateSpace,
+     Datastore.Audit,
+     Pool.Allocate,
+     SDN.Allocate,
+     SDN.Audit,
+     SDN.Use,
+     Sys.Audit,
+     Sys.Console,
+     Sys.Modify,
+     VM.Allocate,
+     VM.Audit,
+     VM.Clone,
+     VM.Config.CDROM,
+     VM.Config.CPU,
+     VM.Config.Cloudinit,
+     VM.Config.Disk,
+     VM.Config.HWType,
+     VM.Config.Memory,
+     VM.Config.Network,
+     VM.Config.Options,
+     VM.Monitor,
+     VM.Migrate,
+     VM.PowerMgmt
+   "
+   ```
 
-**Router Template Setup**
+2. **Create the User**
+   ```bash
+   useradd -m -s /bin/bash -G sudo robot
+   pveum user add robot@pam
+   passwd robot
+   ```
 
-```bash
-ansible-playbook playbooks/1_rtr_template.yml --ask-vault-pass
-```
+3. **Assign the Role to the User**
+   ```bash
+   pveum aclmod / -user robot@pam -role RobotRole
+   ```
 
-**Guest Template Setup**
+4. **Create an API Token for Automation**
+   ```bash
+   pveum user token add robot@pam automation
+   # Note: Store the displayed token ID and secret securely.
+   ```
 
-```bash
-ansible-playbook playbooks/2_vm_template.yml --ask-vault-pass
-```
+**Record these values** (API ID, API Key/Secret, username, etc.) in your `config.yml` for use by the automation.
 
-### 3. Post-Installation
+## 2. Centralized Configuration
 
-**Cloned Router: Expanding the rootfs**
-
-```bash
-opkg update
-opkg install parted losetup resize2fs
-wget -U "" -O expand-root.sh "https://openwrt.org/_export/code/docs/guide-user/advanced/expand_root?codeblock=0"
-. ./expand-root.sh
-```
-
-### 4. Examples
-
-**vault.yml**
+Edit `config.yml` with your environment details:
 
 ```yaml
 # Proxmox host details
-PROXMOX_NODE: "example"
-PROXMOX_HOST: "192.168.0.100"
+PROXMOX_NODE: "proxmox-node-1"
+PROXMOX_HOST: "proxmox-node-1.local"
 PROXMOX_SSH_PORT: "22"
 PROXMOX_USER: "robot"
-PROXMOX_PASSWORD: "..."
-PROXMOX_API_KEY: "..."
-PROXMOX_SSH_KEY: "~/.ssh/proxmox_ecdsa"
+PROXMOX_PASSWORD: "12345678"
+PROXMOX_API_ID: "robot@pam!robot"
+PROXMOX_API_KEY: "e123456b-1234-1234-1234-612345678901"
+PROXMOX_SSH_KEY: "/home/user/.ssh/id.proxmox-node-1"
 
 # Cloud-init details   
-CLOUD_INIT_USER: admin
-CLOUD_INIT_PASSWORD: "..."
-SSH_PUBLIC_KEYS: |
-  ssh-rsa AAAA...
+CLOUD_INIT_USER: "admin"
+CLOUD_INIT_PASSWORD: "12345678"
+CLOUD_INIT_SEARCHDOMAIN: "internal.local"
+CLOUD_INIT_NAMESERVER: "192.168.1.254"
+CLOUD_INIT_SSH_PUBLIC_KEYS: |
+  ecdsa-sha2-nistp521 AAAA12345678rVw== user@user-pc
 ```
 
-## 5. Terraform Usage After Ansible
+## 3. Usage: One-Command Automation
 
-After the Ansible-based template preparation, you can automate VM deployment and configuration on Proxmox using Terraform. Below is a best-practice workflow and example configuration.
+From your project root, run:
 
-### a. Directory Structure
-
-```
-terraform/
-├── provider.tf
-├── variables.tf
-├── secrets.auto.tfvars
-├── main.tf
+```bash
+./init.sh
 ```
 
-### b. Provider Configuration (`provider.tf`)
+This will:
 
-### c. Variables (`variables.tf`)
+- Validate required binaries.
+- Load and export all variables from `config.yml` as both standard environment variables and `TF_VAR_` variables (for Terraform).
+- Run the Ansible playbook to prepare Proxmox templates.
+- Run Terraform to deploy and configure VMs using the same variables.
 
-```hcl
-variable "pm_api_token_id" {}
-variable "pm_api_token_secret" {}
-variable "vm_ssh_public_key" {}
-```
+## 4. Variable Flow
 
-### d. Secrets (`secrets.auto.tfvars`)
+| Source      | Bash/Env Var         | Terraform Variable (auto)   | Ansible Usage (lookup)            |
+|-------------|---------------------|-----------------------------|-----------------------------------|
+| config.yml  | PROXMOX_HOST        | TF_VAR_proxmox_host         | `lookup('env', 'PROXMOX_HOST')`   |
+| config.yml  | CLOUD_INIT_USER     | TF_VAR_cloud_init_user      | `lookup('env', 'CLOUD_INIT_USER')`|
+| ...         | ...                 | ...                         | ...                               |
 
-```hcl
-pm_api_url          = "https://192.168.0.100:8006/api2/json"
-pm_api_token_id     = "robot@pam!terraform"
-pm_api_token_secret = "your_token_secret"
-target_node         = "example"
-template_name       = "ubuntu-template"
-vm_name             = "landscape-vm"
-vm_ip               = "10.0.1.140"
-vm_gw               = "10.0.1.254"
-ssh_public_key      = "ssh-rsa AAAA..."
-```
+## 5. Best Practices
 
-### e. Main Resource (`main.tf`)
+- **Edit only `config.yml`** to change environment-specific values.
+- **Store secrets** only in `config.yml`; never commit sensitive files to version control.
+- **Check logs:** The script logs each step and errors for easy troubleshooting.
+- **For SSH keys:** Can use multi-line values in `config.yml`.
 
-```hcl
-resource "proxmox_vm_qemu" "landscape" {
-  name        = var.vm_name
-  target_node = var.target_node
-  clone       = var.template_name
-  cores       = var.cores
-  memory      = var.memory
-  os_type     = "cloud-init"
+## 6. Troubleshooting
 
-  disk {
-    storage = var.storage
-    size    = "32G"
-    type    = "virtio"
-    backup  = true
-  }
+- If a variable is missing in Ansible or Terraform, ensure it is present in `config.yml` and follows the format.
+- Install any missing tools as prompted by the script.
 
-  network {
-    model  = "virtio"
-    bridge = var.network_bridge
-  }
+## 7. Example Workflow
 
-  ipconfig0 = "ip=${var.vm_ip}/24,gw=${var.vm_gw}"
-  sshkeys   = var.ssh_public_key
-}
-```
-
-### f. Terraform Workflow
-
-1. **Initialize Terraform**
+1. **Create Proxmox user, role, and API token** as described above.
+2. **Edit `config.yml`** with your environment details and credentials.
+3. **Run the automation:**
    ```bash
-   terraform init
+   ./init.sh
    ```
+4. **Check Proxmox Web UI** and verify VMs are created and accessible.
 
-2. **Preview Changes**
-   ```bash
-   terraform plan
-   ```
-
-3. **Apply Configuration**
-   ```bash
-   terraform apply
-   ```
-
-4. **Check Proxmox Web UI**
-   - Confirm that the VM is created, configured, and accessible via SSH.
-
-5. **Tear Down (if needed)**
-   ```bash
-   terraform destroy
-   ```
-
-### g. Best Practices
-
-- Store sensitive data (API tokens, passwords) only in vaults or `.tfvars` files excluded from version control.
-- Use variables for all environment-specific values.
-- Ensure your Proxmox template VM has a cloud-init disk for proper initialization.
-- Assign only the minimal necessary privileges to the robot user/token.
-
-This approach provides a clear, repeatable infrastructure-as-code workflow for deploying and managing Proxmox VMs after your initial Ansible-based template preparation.
+This workflow ensures a single source of truth for all automation variables and a reproducible, one-command setup for your Proxmox landscape. Adjust `config.yml` for new environments or credentials as needed.
