@@ -177,7 +177,7 @@ main() {
                     run_ansible_playbook "$DEFAULT_ANSIBLE_PLAYBOOK"
                     ;;
                 routers)
-                    run_ansible_playbook "$DEFAULT_ANSIBLE_PLAYBOOK" # TODO: Use OpenWRT template here
+                    run_ansible_playbook "playbooks/deploy_rtr_template.yml"
                     ;;
                 *)
                     echo "$USAGE"
