@@ -74,32 +74,18 @@ trap 'cleanup' EXIT
 
 load_config_yml() {
   local config_file="$1"
-  # Use yq to get all top-level keys
-  local keys
-  IFS=$'\n' read -d '' -r -a keys < <(yq e 'keys | .[]' "$config_file" && printf '\0')
-  for key in "${keys[@]}"; do
-    # Special handling for SSH keys
-    if [[ "$key" == "CLOUD_INIT_SSH_PUBLIC_KEYS" ]]; then
-      # Try as multiline string
-      local value
-      value=$(yq -r ".${key}" "$config_file")
-      # If it's a YAML list, join with newlines
-      if yq e ".${key} | type" "$config_file" | grep -q '!!seq'; then
-        value=$(yq -r ".${key}[]" "$config_file" | sed ':a;N;$!ba;s/\n/\\n/g')
-        value="${value//\\n/
-}"
-      fi
-      export CLOUD_INIT_SSH_PUBLIC_KEYS="$value"
-      export TF_VAR_cloud_init_ssh_public_keys="$value"
+  local key value tf_key
+  while IFS= read -r key; do
+    # Check if the key is a sequence (list)
+    if [[ $(yq e ".\"$key\" | type" "$config_file") == "!!seq" ]]; then
+      value=$(yq -r ".\"$key\"[]" "$config_file" | paste -sd $'\n' -)
     else
-      # For other keys, export as usual
-      local value
-      value=$(yq -r ".${key}" "$config_file")
-      export "$key=$value"
-      local tf_key="TF_VAR_$(echo "$key" | tr '[:upper:]' '[:lower:]')"
-      export "$tf_key=$value"
+      value=$(yq -r ".\"$key\"" "$config_file")
     fi
-  done
+    export "$key=$value"
+    tf_key="TF_VAR_$(echo "$key" | tr '[:upper:]' '[:lower:]')"
+    export "$tf_key=$value"
+  done < <(yq e 'keys | .[]' "$config_file")
 }
 
 run_ansible_playbook() {
