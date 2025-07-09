@@ -1,6 +1,6 @@
 # Proxmox Automated Landscape Install
 
-This project enables fully automated Proxmox VM deployment and management using a single command and a centralized configuration file. All environment-specific values are managed in `config.yml`, and the process is orchestrated via the `init.sh` script.
+This project enables fully automated Proxmox VM deployment and management using a single command and a centralized configuration file. All environment-specific values are managed in `config.yml`, and the process is orchestrated via the `controller.sh` script.
 
 ## 1. Prerequisites
 
@@ -8,7 +8,7 @@ This project enables fully automated Proxmox VM deployment and management using 
 
 Before running the automation, you must create a dedicated Proxmox user, assign a custom role with the necessary privileges, and generate an API token. This ensures secure, least-privilege automation.
 
-**Steps:**
+#### Steps
 
 1. **Create a Custom Role**  
    Assign only the permissions required for VM management and automation:
@@ -58,7 +58,7 @@ Before running the automation, you must create a dedicated Proxmox user, assign 
    # Note: Store the displayed token ID and secret securely.
    ```
 
-**Record these values** (API ID, API Key/Secret, username, etc.) in your `config.yml` for use by the automation.
+*Record these values (API ID, API Key/Secret, username, etc.) in your `config.yml` for use by the automation.*
 
 ## 2. Centralized Configuration
 
@@ -84,13 +84,21 @@ CLOUD_INIT_SSH_PUBLIC_KEYS: |
   ecdsa-sha2-nistp521 AAAA12345678rVw== user@user-pc
 ```
 
-## 3. Usage: One-Command Automation
+## 3. Usage
 
 From your project root, run:
 
 ```bash
-./init.sh
+./controller.sh 
 ```
+
+- All command combinations are covered in a single, concise usage line.
+- Example:  
+  ```bash
+  ./controller.sh init
+  ./controller.sh terraform plan
+  ./controller.sh ansible vms
+  ```
 
 This will:
 
@@ -102,17 +110,17 @@ This will:
 ## 4. Variable Flow
 
 | Source      | Bash/Env Var         | Terraform Variable (auto)   | Ansible Usage (lookup)            |
-|-------------|---------------------|-----------------------------|-----------------------------------|
-| config.yml  | PROXMOX_HOST        | TF_VAR_proxmox_host         | `lookup('env', 'PROXMOX_HOST')`   |
-| config.yml  | CLOUD_INIT_USER     | TF_VAR_cloud_init_user      | `lookup('env', 'CLOUD_INIT_USER')`|
-| ...         | ...                 | ...                         | ...                               |
+|-------------|----------------------|-----------------------------|-----------------------------------|
+| config.yml  | PROXMOX_HOST         | TF_VAR_proxmox_host         | `lookup('env', 'PROXMOX_HOST')`   |
+| config.yml  | CLOUD_INIT_USER      | TF_VAR_cloud_init_user      | `lookup('env', 'CLOUD_INIT_USER')`|
+| ...         | ...                  | ...                         | ...                               |
 
 ## 5. Best Practices
 
-- **Edit only `config.yml`** to change environment-specific values.
+- **Edit only** `config.yml` to change environment-specific values.
 - **Store secrets** only in `config.yml`; never commit sensitive files to version control.
 - **Check logs:** The script logs each step and errors for easy troubleshooting.
-- **For SSH keys:** Can use multi-line values in `config.yml`.
+- **For SSH keys:** You can use multi-line values in `config.yml`.
 
 ## 6. Troubleshooting
 
@@ -125,7 +133,7 @@ This will:
 2. **Edit `config.yml`** with your environment details and credentials.
 3. **Run the automation:**
    ```bash
-   ./init.sh
+   ./controller.sh init
    ```
 4. **Check Proxmox Web UI** and verify VMs are created and accessible.
 
