@@ -2,7 +2,7 @@ resource "proxmox_vm_qemu" "tst-1" {
   vmid              = 100
   name              = "tst-1"
   desc              = "A test VM."
-  target_node       = "jgy-dev-proxmox"
+  target_node       = var.proxmox_node
   clone             = "template-suse-Leap-15.6"
   memory            = 1024
   agent             = 1
@@ -17,11 +17,11 @@ resource "proxmox_vm_qemu" "tst-1" {
   scsihw            = "virtio-scsi-pci"
 
   # Cloud-init settings
-  ciuser            = "admin"
-  cipassword        = var.vm_password
-  searchdomain      = "internal.local"
-  nameserver        = "10.0.1.254"
-  sshkeys           = var.vm_ssh_public_key
+  ciuser            = var.cloud_init_user
+  cipassword        = var.cloud_init_password
+  searchdomain      = var.cloud_init_searchdomain
+  nameserver        = var.cloud_init_nameserver
+  sshkeys           = var.cloud_init_ssh_public_keys
   ipconfig0         = "ip=10.0.1.140/24,gw=10.0.1.254"
 
   cpu {
@@ -46,9 +46,9 @@ resource "proxmox_vm_qemu" "tst-1" {
   }
 
   network {
+    id       = 0
     bridge   = "vmbr0"
     firewall = true
-    id       = 0
     model    = "virtio"
   }  
 

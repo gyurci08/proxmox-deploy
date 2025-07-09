@@ -4,3 +4,4 @@ secret*
 *.backup
 *.hcl
 .terraform/
+config.yml

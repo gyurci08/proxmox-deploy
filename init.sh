@@ -1,22 +1,27 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-## CONSTANTS ###################################################################
+###############################################################################
+# Proxmox Landscape Automated Init Script
+# - Loads config.yml and exports variables as env vars
+# - Runs Ansible and Terraform with centralized config
+###############################################################################
+
+# === CONSTANTS ===
 readonly SCRIPT_DIR="$(dirname "$(realpath -s "${BASH_SOURCE[0]}")")"
 readonly SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
 readonly CURRENT_DATE="$(date +%Y-%m-%d_%H-%M-%S)"
 readonly LOG_PREFIX="[PROXMOX_LANDSCAPE_INIT]"
 readonly REQUIRED_BINS=("ansible-playbook" "terraform")
-
-# Ansible and Terraform directories
+readonly CONFIG_FILE="${SCRIPT_DIR}/config.yml"
 readonly ANSIBLE_DIR="${SCRIPT_DIR}/01_ansible_deploy_templates"
-readonly ANSIBLE_PLAYBOOK="playbooks/2_vm_template.yml"
+readonly ANSIBLE_PLAYBOOK="playbooks/deploy_vm_template.yml"
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/02_terraform_deploy_vms"
 
-## GLOBALS #####################################################################
+# === GLOBALS ===
 CURRENT_DIR=""
 
-## FUNCTIONS ###################################################################
+# === FUNCTIONS ===
 
 log_header() {
     printf '\n%*s\n' "${COLUMNS:-50}" '' | tr ' ' '='
@@ -41,7 +46,6 @@ validate_binaries() {
     done
 }
 
-# Safe pushd/popd wrapper to ensure directory stack is managed properly
 safe_pushd() {
     if ! pushd "$1" > /dev/null; then
         log_error "Failed to change directory to $1"
@@ -58,7 +62,6 @@ safe_popd() {
     CURRENT_DIR=""
 }
 
-# Cleanup function to be called on script exit
 cleanup() {
     if [[ -n "$CURRENT_DIR" ]]; then
         log_info "Cleaning up: returning to original directory"
@@ -66,15 +69,32 @@ cleanup() {
     fi
 }
 
-# Trap ERR and EXIT signals
 trap 'log_error "An unexpected error occurred. Exiting."; cleanup' ERR
 trap 'cleanup' EXIT
+
+load_config_yml() {
+  local config_file="$1"
+  # Only supports flat KEY: VALUE pairs (no nesting or multi-line)
+  while IFS= read -r line; do
+    # Skip comments and empty lines
+    [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
+    # Split on first colon only
+    IFS=":" read -r key value <<< "$line"
+    key="${key//[[:space:]]/}"      # Remove all whitespace from key
+    value="${value# }"              # Trim leading space from value
+    value="${value%\"}"             # Remove trailing quote if present
+    value="${value#\"}"             # Remove leading quote if present
+    export "$key=$value"            # Export as plain env var
+    tf_key="TF_VAR_${key,,}"        # Lowercase key for TF_VAR_
+    export "$tf_key=$value"         # Export as TF_VAR_<lowercase>
+  done < "$config_file"
+}
 
 run_ansible_playbook() {
     log_info "Changing directory to $ANSIBLE_DIR"
     safe_pushd "$ANSIBLE_DIR"
     log_info "Running Ansible playbook: $ANSIBLE_PLAYBOOK"
-    if ! ansible-playbook "$ANSIBLE_PLAYBOOK" --ask-vault-pass; then
+    if ! ansible-playbook "$ANSIBLE_PLAYBOOK"; then
         log_error "Ansible playbook failed. Exiting."
         safe_popd
         exit 2
@@ -100,11 +120,20 @@ run_terraform_apply() {
     safe_popd
 }
 
-## MAIN ########################################################################
+# === MAIN ===
 
 log_header "Starting Proxmox Automated Landscape Install"
 
 validate_binaries
+
+log_info "Loading config from $CONFIG_FILE"
+load_config_yml "$CONFIG_FILE"
+
+# You can echo loaded vars for debug:
+log_info "Loaded PROXMOX_NODE=$PROXMOX_NODE"
+log_info "Loaded CLOUD_INIT_USER=$CLOUD_INIT_USER"
+log_info "Loaded CLOUD_INIT_SSH_PUBLIC_KEYS=$CLOUD_INIT_SSH_PUBLIC_KEYS"
+
 run_ansible_playbook
 run_terraform_apply
 

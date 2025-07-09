@@ -1,0 +1,48 @@
+# ===========================
+# Proxmox Installation Config
+# ===========================
+
+# --- Storage & Region ---
+
+STORAGE_POOL: "local-lvm"
+
+TIMEZONE: "Europe/Budapest"
+
+# --- VM Definitions ---
+GUEST_DISTRIBUTION: "suse"   # Target distro: suse, ubuntu
+
+GUEST:
+  VM_VMID:        10001
+  VM_NAME:        "template-{{ GUEST_DISTRIBUTION }}-{{ VERSION }}"
+  VM_MACHINE:     q35
+  VM_CPU:         host
+  VM_CORES:       2
+  VM_DISPLAY:     vmware
+  VM_MEMORY:      1024
+  VM_ROOT_SIZE:   "10G"
+  VM_BRIDGE:      "vmbr0"
+  PACKAGES:
+    - qemu-guest-agent
+    - sudo
+    - traceroute
+    - htop
+    - iotop
+    - nano
+
+# --- Environment-Loaded Variables ---
+
+# Proxmox host details
+PROXMOX_HOST:      "{{ lookup('env', 'PROXMOX_HOST') }}"
+PROXMOX_NODE:      "{{ lookup('env', 'PROXMOX_NODE') }}"
+PROXMOX_SSH_PORT:  "{{ lookup('env', 'PROXMOX_SSH_PORT') }}"
+PROXMOX_USER:      "{{ lookup('env', 'PROXMOX_USER') }}"
+PROXMOX_PASSWORD:  "{{ lookup('env', 'PROXMOX_PASSWORD') }}"
+PROXMOX_API_KEY:   "{{ lookup('env', 'PROXMOX_API_KEY') }}"
+PROXMOX_SSH_KEY:   "{{ lookup('env', 'PROXMOX_SSH_KEY') }}"
+
+# Cloud-init details
+CLOUD_INIT_USER:            "{{ lookup('env', 'CLOUD_INIT_USER') }}"
+CLOUD_INIT_PASSWORD:        "{{ lookup('env', 'CLOUD_INIT_PASSWORD') }}"
+CLOUD_INIT_SEARCHDOMAIN:    "{{ lookup('env', 'CLOUD_INIT_SEARCHDOMAIN') }}"
+CLOUD_INIT_NAMESERVER:      "{{ lookup('env', 'CLOUD_INIT_NAMESERVER') }}"
+CLOUD_INIT_SSH_PUBLIC_KEYS: "{{ lookup('env', 'CLOUD_INIT_SSH_PUBLIC_KEYS') }}"

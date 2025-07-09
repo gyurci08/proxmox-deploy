@@ -1,7 +1,0 @@
-VERSION: "23.05.3"
-ARCHITECTURE: "x86_64"
-IMAGE_URL: "https://downloads.openwrt.org/releases/{{ VERSION }}/targets/x86/64/openwrt-{{ VERSION }}-x86-64-generic-ext4-combined-efi.img.gz"
-DESTINATION_PATH: "/var/lib/vz/template/iso/openwrt-{{ VERSION }}-{{ ARCHITECTURE }}.img"
-PACKAGE_MANAGER: "opkg"
-PACKAGE_UPDATE_COMMAND: "opkg update"
-PACKAGE_UPGRADE_COMMAND: "opkg list-upgradable | cut -f 1 -d ' ' | xargs opkg upgrade"
