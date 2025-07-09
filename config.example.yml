@@ -1,0 +1,17 @@
+# Proxmox host details
+PROXMOX_NODE: "proxmox-node-1"
+PROXMOX_HOST: "proxmox-node-1.local"
+PROXMOX_SSH_PORT: "22"
+PROXMOX_USER: "robot"
+PROXMOX_PASSWORD: "12345678"
+PROXMOX_API_ID: "robot@pam!robot"
+PROXMOX_API_KEY: "e123456b-1234-1234-1234-612345678901"
+PROXMOX_SSH_KEY: "/home/user/.ssh/id.proxmox-node-1"
+
+# Cloud-init details   
+CLOUD_INIT_USER: "admin"
+CLOUD_INIT_PASSWORD: "12345678"
+CLOUD_INIT_SEARCHDOMAIN: "internal.local"
+CLOUD_INIT_NAMESERVER: "192.168.1.254"
+CLOUD_INIT_SSH_PUBLIC_KEYS: |
+  ecdsa-sha2-nistp521 AAAA12345678rVw== user@user-pc
