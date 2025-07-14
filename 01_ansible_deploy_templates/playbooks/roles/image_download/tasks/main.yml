@@ -1,17 +1,41 @@
-- name: Check if image exists
-  stat:
-    path: "{{ DESTINATION_PATH }}"
-  register: image_stat
+- name: Extract extension from IMAGE_URL
+  set_fact:
+    image_extension: "{{ IMAGE_URL | regex_search('\\.(tar\\.gz|tgz|tar|zip|gz|img)$') | default('') }}"
 
-- name: Download image asynchronously
+- name: Set download path (compressed or raw)
+  set_fact:
+    download_path: >-
+      {{ DESTINATION_PATH if image_extension == '.img'
+         else DESTINATION_PATH ~ image_extension }}
+
+- name: Check if extracted or compressed image exists
+  stat:
+    path: "{{ item }}"
+  register: image_stats
+  loop:
+    - "{{ DESTINATION_PATH }}"
+    - "{{ download_path }}"
+
+- name: Set flags for image presence
+  set_fact:
+    extracted_image_exists: "{{ image_stats.results[0].stat.exists | default(false) }}"
+    compressed_image_exists: "{{ image_stats.results[1].stat.exists | default(false) }}"
+    need_download: "{{ not (image_stats.results[0].stat.exists | default(false) or image_stats.results[1].stat.exists | default(false)) }}"
+
+- name: Show image URL before downloading
+  ansible.builtin.debug:
+    msg: "Downloading OpenWRT image from: {{ IMAGE_URL }}"
+  when: need_download
+
+- name: Download image asynchronously if needed
   get_url:
     url: "{{ IMAGE_URL }}"
-    dest: "{{ DESTINATION_PATH }}"
+    dest: "{{ download_path }}"
     mode: '0644'
   async: "{{ image_download_timeout }}"
   poll: 0
   register: download_job
-  when: not image_stat.stat.exists
+  when: need_download
 
 - name: Wait for image download to finish
   async_status:
@@ -20,4 +44,35 @@
   until: download_result.finished
   retries: "{{ image_download_retries }}"
   delay: "{{ image_download_delay }}"
-  when: not image_stat.stat.exists
+  when: need_download
+
+- name: Extract tar or zip archive if needed
+  unarchive:
+    src: "{{ download_path }}"
+    dest: "{{ DESTINATION_PATH | dirname }}"
+    remote_src: yes
+  when:
+    - image_extension in ['.tar.gz', '.tgz', '.tar', '.zip']
+    - not extracted_image_exists
+
+- name: Decompress gzipped file if needed
+  command: "gunzip -kf {{ download_path }}"
+  args:
+    removes: "{{ download_path }}"
+    creates: "{{ DESTINATION_PATH }}"
+  register: gzip_result
+  when:
+    - image_extension == '.gz'
+    - not extracted_image_exists
+  failed_when: >-
+    gzip_result.rc != 0 and
+    ('trailing garbage ignored' not in gzip_result.stderr)
+
+# - name: Remove compressed file after extraction
+#   file:
+#     path: "{{ download_path }}"
+#     state: absent
+#   when:
+#     - extracted_image_exists
+#     - compressed_image_exists
+#     - download_path != DESTINATION_PATH

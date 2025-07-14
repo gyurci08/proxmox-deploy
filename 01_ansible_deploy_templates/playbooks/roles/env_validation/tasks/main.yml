@@ -1,16 +1,16 @@
 - name: Check if distribution variable file exists
   stat:
-    path: "{{ playbook_dir }}/../vars/distro-{{ GUEST_DISTRIBUTION }}.yml"
+    path: "{{ playbook_dir }}/../vars/distro-{{ DISTRIBUTION }}.yml"
   register: distro_file
 
 - name: Fail if distribution variable file does not exist
   fail:
-    msg: "Distribution variable file '{{ playbook_dir }}/../vars/distro-{{ GUEST_DISTRIBUTION }}.yml' not found."
+    msg: "Distribution variable file '{{ playbook_dir }}/../vars/distro-{{ DISTRIBUTION }}.yml' not found."
   when: not distro_file.stat.exists
 
 - name: Load distribution-specific variables
   include_vars:
-    file: "{{ playbook_dir }}/../vars/distro-{{ GUEST_DISTRIBUTION }}.yml"
+    file: "{{ playbook_dir }}/../vars/distro-{{ DISTRIBUTION }}.yml"
 
 - name: Set global facts for all hosts
   set_fact:

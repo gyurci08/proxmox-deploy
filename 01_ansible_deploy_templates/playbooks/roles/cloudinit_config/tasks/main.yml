@@ -1,12 +1,12 @@
-- name: Copy custom cloud-init configuration (skip for OpenWRT)
+- name: Copy custom cloud-init configuration (skip for ROUTERS)
   copy:
-    src: "{{ playbook_dir }}/../cloud-init/cloud-{{ GUEST_DISTRIBUTION }}.cfg"
+    src: "{{ playbook_dir }}/../cloud-init/cloud-{{ DISTRIBUTION }}.cfg"
     dest: "/tmp/{{ GUEST.VM_VMID }}-cloud.cfg"
     mode: '0644'
-  when: GUEST_DISTRIBUTION != 'openwrt'
+  when: DISTRIBUTION != 'openwrt'
 
-- name: Replace original cloud.cfg in VM (skip for OpenWRT)
+- name: Replace original cloud.cfg in VM (skip for ROUTERS)
   command: >
     virt-customize -a {{ DESTINATION_PATH }}.modified 
     --upload "/tmp/{{ GUEST.VM_VMID }}-cloud.cfg:/etc/cloud/cloud.cfg"
-  when: GUEST_DISTRIBUTION != 'openwrt'
+  when: DISTRIBUTION != 'openwrt'

@@ -1,3 +1,9 @@
+- name: Set image variables based on distribution
+  set_fact:
+    vm_root_size: "{{ ROUTER.VM_ROOT_SIZE if DISTRIBUTION == 'openwrt' else GUEST.VM_ROOT_SIZE }}"
+    vm_packages: "{{ GUEST.PACKAGES }}"
+    image_format: "{{ 'raw' if DISTRIBUTION == 'openwrt' else 'qcow2' }}"
+
 - name: Copy the original image to a modified version
   copy:
     src: "{{ DESTINATION_PATH }}"
@@ -7,25 +13,25 @@
 - name: Resize the copied image if its size differs from the desired root size
   shell: |
     current_size=$(qemu-img info {{ DESTINATION_PATH }}.modified | grep 'virtual size' | awk '{print $3}')
-    if [ "$current_size" != "{{ GUEST.VM_ROOT_SIZE }}" ]; then
-      qemu-img resize -f qcow2 {{ DESTINATION_PATH }}.modified {{ GUEST.VM_ROOT_SIZE }}
+    if [ "$current_size" != "{{ vm_root_size }}" ]; then
+      qemu-img resize -f {{ image_format }} {{ DESTINATION_PATH }}.modified {{ vm_root_size }}
     fi
   register: resize_result
   changed_when: resize_result.stdout != ""
 
-- name: Install required packages inside the copied cloud image (skip for OpenWRT)
+- name: Install required packages inside the copied cloud image (skip for ROUTERS)
   command: >
     virt-customize -a {{ DESTINATION_PATH }}.modified
-    --install {{ GUEST.PACKAGES | join(",") }}
+    --install {{ vm_packages | join(",") }}
     --run-command '{{ PACKAGE_UPDATE_COMMAND }} && {{ PACKAGE_UPGRADE_COMMAND }}'
-  when: GUEST_DISTRIBUTION != 'openwrt'
+  when: DISTRIBUTION != 'openwrt'
 
-- name: Set the timezone inside the copied image (skip for OpenWRT)
+- name: Set the timezone inside the copied image (skip for ROUTERS)
   command: >
     virt-customize -a {{ DESTINATION_PATH }}.modified --timezone "{{ TIMEZONE }}"
   register: TIMEZONE_RESULT
   changed_when: TIMEZONE_RESULT.rc == 0
-  when: GUEST_DISTRIBUTION != 'openwrt'
+  when: DISTRIBUTION != 'openwrt'
 
 - name: Disable MOTD messages in the image (Ubuntu only)
   command: >
@@ -33,4 +39,4 @@
     --run-command 'chmod -x /etc/update-motd.d/*'
     --run-command 'echo "ENABLED=0" > /etc/default/motd-news'
   ignore_errors: yes
-  when: GUEST_DISTRIBUTION == 'ubuntu'
+  when: DISTRIBUTION == 'ubuntu'

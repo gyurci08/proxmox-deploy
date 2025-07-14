@@ -1,19 +1,19 @@
 - name: Set VM hardware variables based on distribution
   set_fact:
-    vm_vmid:    "{{ OPENWRT.VM_VMID if GUEST_DISTRIBUTION == 'openwrt' else GUEST.VM_VMID }}"
-    vm_name:    "{{ OPENWRT.VM_NAME if GUEST_DISTRIBUTION == 'openwrt' else GUEST.VM_NAME }}"
-    vm_machine: "{{ OPENWRT.VM_MACHINE if GUEST_DISTRIBUTION == 'openwrt' else GUEST.VM_MACHINE }}"
-    vm_memory:  "{{ OPENWRT.VM_MEMORY if GUEST_DISTRIBUTION == 'openwrt' else GUEST.VM_MEMORY }}"
-    vm_cpu:     "{{ OPENWRT.VM_CPU if GUEST_DISTRIBUTION == 'openwrt' else GUEST.VM_CPU }}"
-    vm_cores:   "{{ OPENWRT.VM_CORES if GUEST_DISTRIBUTION == 'openwrt' else GUEST.VM_CORES }}"
-    vm_vga:     "{{ OPENWRT.VM_DISPLAY if GUEST_DISTRIBUTION == 'openwrt' else GUEST.VM_DISPLAY }}"
-    vm_agent:   "{{ 0 if GUEST_DISTRIBUTION == 'openwrt' else 1 }}"
+    vm_vmid:    "{{ ROUTER.VM_VMID if DISTRIBUTION == 'openwrt' else GUEST.VM_VMID }}"
+    vm_name:    "{{ ROUTER.VM_NAME if DISTRIBUTION == 'openwrt' else GUEST.VM_NAME }}"
+    vm_machine: "{{ ROUTER.VM_MACHINE if DISTRIBUTION == 'openwrt' else GUEST.VM_MACHINE }}"
+    vm_memory:  "{{ ROUTER.VM_MEMORY if DISTRIBUTION == 'openwrt' else GUEST.VM_MEMORY }}"
+    vm_cpu:     "{{ ROUTER.VM_CPU if DISTRIBUTION == 'openwrt' else GUEST.VM_CPU }}"
+    vm_cores:   "{{ ROUTER.VM_CORES if DISTRIBUTION == 'openwrt' else GUEST.VM_CORES }}"
+    vm_vga:     "{{ ROUTER.VM_DISPLAY if DISTRIBUTION == 'openwrt' else GUEST.VM_DISPLAY }}"
+    vm_agent:   "{{ 0 if DISTRIBUTION == 'openwrt' else 1 }}"
     vm_net: >-
       {{
         {
-          'net0': "virtio,bridge=vmbr0",
-          'net1': "virtio,bridge=vmbr1"
-        } if GUEST_DISTRIBUTION == 'openwrt'
+          'net0': "virtio,bridge=" ~ ROUTER.VM_BRIDGE   ~ ",firewall=0",
+          'net0': "virtio,bridge=" ~ ROUTER.VM_BRIDGE_2 ~ ",firewall=0"
+        } if DISTRIBUTION == 'openwrt'
         else {
           'net0': "virtio,bridge=" ~ GUEST.VM_BRIDGE ~ ",firewall=1"
         }
@@ -45,28 +45,31 @@
 
 - name: Import and configure disk
   shell: |
-    qm importdisk {{ GUEST.VM_VMID }} {{ DESTINATION_PATH }}.modified {{ STORAGE_POOL }} &&
-    qm set {{ GUEST.VM_VMID }} --virtio0 {{ STORAGE_POOL }}:vm-{{ GUEST.VM_VMID }}-disk-0,discard=on,iothread=1 --boot c --bootdisk virtio0
+    qm importdisk {{ vm_vmid }} {{ DESTINATION_PATH }}.modified {{ STORAGE_POOL }} &&
+    qm set {{ vm_vmid }} --virtio0 {{ STORAGE_POOL }}:vm-{{ vm_vmid }}-disk-0,discard=on,iothread=1 --boot c --bootdisk virtio0
   args:
-    creates: "/var/lib/vz/images/{{ GUEST.VM_VMID }}/vm-{{ GUEST.VM_VMID }}-disk-0.raw"
+    creates: "/var/lib/vz/images/{{ vm_vmid }}/vm-{{ vm_vmid }}-disk-0.raw"
 
-- name: Create temporary SSH key file
+- name: Create temporary SSH key file (skip for ROUTERS)
   copy:
     content: "{{ CLOUD_INIT_SSH_PUBLIC_KEYS }}"
-    dest: "/tmp/ssh_key_{{ GUEST.VM_VMID }}.pub"
+    dest: "/tmp/ssh_key_{{ vm_vmid }}.pub"
     mode: '0600'
+  when: DISTRIBUTION != 'openwrt'
 
-- name: Set cloud-init configurations
+- name: Set cloud-init configurations (skip for ROUTERS)
   shell: |
-    qm set {{ GUEST.VM_VMID }} --ciuser {{ CLOUD_INIT_USER }} --cipassword {{ CLOUD_INIT_PASSWORD }} --sshkeys "/tmp/ssh_key_{{ GUEST.VM_VMID }}.pub" --ciupgrade 0 --ipconfig0 'ip=dhcp' --ipconfig1 '' --searchdomain "{{ CLOUD_INIT_SEARCHDOMAIN }}" --nameserver "{{ CLOUD_INIT_NAMESERVER }}"
+    qm set {{ vm_vmid }} --ciuser {{ CLOUD_INIT_USER }} --cipassword {{ CLOUD_INIT_PASSWORD }} --sshkeys "/tmp/ssh_key_{{ vm_vmid }}.pub" --ciupgrade 0 --ipconfig0 'ip=dhcp' --ipconfig1 '' --searchdomain "{{ CLOUD_INIT_SEARCHDOMAIN }}" --nameserver "{{ CLOUD_INIT_NAMESERVER }}"
+  when: DISTRIBUTION != 'openwrt'
 
-- name: Remove temporary SSH key file
+- name: Remove temporary SSH key file (skip for ROUTERS)
   file:
-    path: "/tmp/ssh_key_{{ GUEST.VM_VMID }}.pub"
+    path: "/tmp/ssh_key_{{ vm_vmid }}.pub"
     state: absent
+  when: DISTRIBUTION != 'openwrt'
 
 - name: Convert VM to template
-  command: qm template {{ GUEST.VM_VMID }}
+  command: qm template {{ vm_vmid }}
 
 - name: Verify template creation
   community.general.proxmox_vm_info:
@@ -74,7 +77,7 @@
     api_password: "{{ PROXMOX_PASSWORD }}"
     api_host: "{{ PROXMOX_HOST }}"
     node: "{{ PROXMOX_NODE }}"
-    vmid: "{{ GUEST.VM_VMID }}"
+    vmid: "{{ vm_vmid }}"
   register: final_vm_info
 
 - name: Cleanup modified image file

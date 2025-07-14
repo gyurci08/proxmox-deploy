@@ -9,11 +9,11 @@ STORAGE_POOL: "local-lvm"
 TIMEZONE: "Europe/Budapest"
 
 # --- VM Definitions ---
-GUEST_DISTRIBUTION: "suse"   # Target distro: suse, ubuntu
+DISTRIBUTION: "openwrt"   # Target distro: suse, ubuntu, openwrt
 
 GUEST:
   VM_VMID:        10000
-  VM_NAME:        "template-{{ GUEST_DISTRIBUTION }}-{{ VERSION }}"
+  VM_NAME:        "template-{{ DISTRIBUTION }}-{{ VERSION }}"
   VM_MACHINE:     q35
   VM_CPU:         host
   VM_CORES:       2
@@ -29,9 +29,9 @@ GUEST:
     - iotop
     - nano
 
-OPENWRT:
+ROUTER:
   VM_VMID: 10001
-  VM_NAME: "template-openwrt-{{ VERSION }}"
+  VM_NAME: "template-{{ DISTRIBUTION }}-{{ VERSION }}"
   VM_MACHINE: q35
   VM_CPU: host
   VM_CORES: 1
@@ -39,6 +39,7 @@ OPENWRT:
   VM_MEMORY: 128
   VM_ROOT_SIZE: "1G"
   VM_BRIDGE: "vmbr0"
+  VM_BRIDGE_2: "vmbr0"
   
 # --- Environment-Loaded Variables ---
 
