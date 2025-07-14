@@ -1,21 +1,25 @@
+- name: Set VM hardware variables based on distribution
+  set_fact:
+    vm_vmid:    "{{ ROUTER.VM_VMID if DISTRIBUTION == 'openwrt' else GUEST.VM_VMID }}"
+
 - name: Check existing VM
   community.general.proxmox_vm_info:
     api_user: "{{ PROXMOX_USER }}@pam"
     api_password: "{{ PROXMOX_PASSWORD }}"
     api_host: "{{ PROXMOX_HOST }}"
     node: "{{ PROXMOX_NODE }}"
-    vmid: "{{ GUEST.VM_VMID }}"
+    vmid: "{{ vm_vmid }}"
   register: vm_info
 
 - name: Stop existing VM if running
-  command: "qm stop {{ GUEST.VM_VMID }}"
+  command: "qm stop {{ vm_vmid }}"
   register: stop_result
   changed_when: stop_result.rc == 0
   when: vm_info.proxmox_vms | length > 0 and vm_info.proxmox_vms[0].status == 'running'
   ignore_errors: yes
 
 - name: Remove existing VM
-  command: "qm destroy {{ GUEST.VM_VMID }} --purge"
+  command: "qm destroy {{ vm_vmid }} --purge"
   register: destroy_result
   until: destroy_result.rc == 0
   retries: 3

@@ -12,7 +12,7 @@
       {{
         {
           'net0': "virtio,bridge=" ~ ROUTER.VM_BRIDGE   ~ ",firewall=0",
-          'net0': "virtio,bridge=" ~ ROUTER.VM_BRIDGE_2 ~ ",firewall=0"
+          'net1': "virtio,bridge=" ~ ROUTER.VM_BRIDGE_2 ~ ",firewall=0"
         } if DISTRIBUTION == 'openwrt'
         else {
           'net0': "virtio,bridge=" ~ GUEST.VM_BRIDGE ~ ",firewall=1"

@@ -16,9 +16,7 @@ readonly LOG_PREFIX="[PROXMOX_LANDSCAPE_INIT]"
 readonly REQUIRED_BINS=("ansible-playbook" "terraform" "yq")
 readonly CONFIG_FILE="${SCRIPT_DIR}/config.yml"
 readonly ANSIBLE_DIR="${SCRIPT_DIR}/01_ansible_deploy_templates"
-readonly ANSIBLE_VARS="${ANSIBLE_DIR}/group_vars/all/proxmox.yml"
 readonly DEFAULT_ANSIBLE_PLAYBOOK="playbooks/deploy_vm_template.yml"
-readonly DEFAULT_DISTRO="suse"
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/02_terraform_deploy_vms"
 
 # === GLOBALS ===
@@ -96,20 +94,15 @@ load_config_yml() {
 
 # === RUNNERS ===
 run_ansible_playbook() {
-    local DISTRO="$1"
+    local playbook="$1"
     log_info "Changing directory to $ANSIBLE_DIR"
     safe_pushd "$ANSIBLE_DIR"
-
-    log_info "Updating DISTRIBUTION in $ANSIBLE_VARS"
-    sed -i -E "s/^(DISTRIBUTION: \")[^\"]*(\")/\1${DISTRO}\2/" "$ANSIBLE_VARS"
-
-    log_info "Running Ansible playbook: $DEFAULT_ANSIBLE_PLAYBOOK"
-    if ! ansible-playbook "$DEFAULT_ANSIBLE_PLAYBOOK"; then
+    log_info "Running Ansible playbook: $playbook"
+    if ! ansible-playbook "$playbook"; then
         log_error "Ansible playbook failed. Exiting."
         safe_popd
         exit 2
     fi
-
     safe_popd
 }
 
@@ -180,11 +173,17 @@ main() {
             ;;
         ansible)
             case "${2:-}" in
-                vms)
-                    run_ansible_playbook "suse"
+                suse)
+                    sed -i -E "s/^(DISTRIBUTION: \")[^\"]*(\")/\1suse\2/" "${ANSIBLE_DIR}/group_vars/all/proxmox.yml"
+                    run_ansible_playbook "$DEFAULT_ANSIBLE_PLAYBOOK"
                     ;;
-                routers)
-                    run_ansible_playbook "openwrt"
+                ubuntu)
+                    sed -i -E "s/^(DISTRIBUTION: \")[^\"]*(\")/\1ubuntu\2/" "${ANSIBLE_DIR}/group_vars/all/proxmox.yml"
+                    run_ansible_playbook "$DEFAULT_ANSIBLE_PLAYBOOK"
+                    ;;
+                openwrt)
+                    sed -i -E "s/^(DISTRIBUTION: \")[^\"]*(\")/\1openwrt\2/" "${ANSIBLE_DIR}/group_vars/all/proxmox.yml"
+                    run_ansible_playbook "$DEFAULT_ANSIBLE_PLAYBOOK"
                     ;;
                 *)
                     echo "$USAGE"
