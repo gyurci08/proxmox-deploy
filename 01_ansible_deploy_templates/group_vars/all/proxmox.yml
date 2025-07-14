@@ -9,7 +9,7 @@ STORAGE_POOL: "local-lvm"
 TIMEZONE: "Europe/Budapest"
 
 # --- VM Definitions ---
-DISTRIBUTION: "openwrt"   # Target distro: suse, ubuntu, openwrt
+DISTRIBUTION: "suse"   # Target distro: suse, ubuntu, openwrt
 
 GUEST:
   VM_VMID:        10000
