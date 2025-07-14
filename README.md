@@ -89,23 +89,27 @@ CLOUD_INIT_SSH_PUBLIC_KEYS: |
 From your project root, run:
 
 ```bash
-./controller.sh 
+./controller.sh
 ```
 
-- All command combinations are covered in a single, concise usage line.
-- Example:  
-  ```bash
-  ./controller.sh init
-  ./controller.sh terraform plan
-  ./controller.sh ansible suse
-  ```
+All command combinations are covered in a single, concise usage line.
 
-This will:
+**Examples:**
+```bash
+./controller.sh deploy
+./controller.sh manage
+./controller.sh destroy
+./controller.sh terraform plan
+./controller.sh ansible suse
+```
 
-- Validate required binaries.
-- Load and export all variables from `config.yml` as both standard environment variables and `TF_VAR_` variables (for Terraform).
-- Run the Ansible playbook to prepare Proxmox templates.
-- Run Terraform to deploy and configure VMs using the same variables.
+### Supported Commands
+
+- `deploy` – Run Ansible to prepare Proxmox templates, then apply Terraform to deploy VMs.
+- `manage` – Apply the current Terraform configuration (idempotent).
+- `destroy` – Destroy all Terraform-managed infrastructure.
+- `terraform {validate|plan|apply|destroy}` – Run specific Terraform subcommands.
+- `ansible {suse|ubuntu|openwrt}` – Run the Ansible playbook for a specific distribution.
 
 ## 4. Variable Flow
 
@@ -124,7 +128,7 @@ This will:
 
 ## 6. Troubleshooting
 
-- If a variable is missing in Ansible or Terraform, ensure it is present in `config.yml` and follows the format.
+- If a variable is missing in Ansible or Terraform, ensure it is present in `config.yml` and follows the correct format.
 - Install any missing tools as prompted by the script.
 
 ## 7. Example Workflow
@@ -133,7 +137,7 @@ This will:
 2. **Edit `config.yml`** with your environment details and credentials.
 3. **Run the automation:**
    ```bash
-   ./controller.sh init
+   ./controller.sh deploy
    ```
 4. **Check Proxmox Web UI** and verify VMs are created and accessible.
 

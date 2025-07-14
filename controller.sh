@@ -5,14 +5,14 @@ set -Eeuo pipefail
 # Proxmox Landscape Automated Controller Script
 # - Loads config.yml and exports variables as env vars
 # - Runs Ansible and Terraform with centralized config
-# - Supports: init, terraform {validate|plan|apply|destroy}, ansible {suse|ubuntu|openwrt}
+# - Supports: deploy, manage, destroy, terraform {validate|plan|apply|destroy}, ansible {suse|ubuntu|openwrt}
 ###############################################################################
 
 # === CONSTANTS ===
 readonly SCRIPT_DIR="$(dirname "$(realpath -s "${BASH_SOURCE[0]}")")"
 readonly SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
 readonly CURRENT_DATE="$(date +%Y-%m-%d_%H-%M-%S)"
-readonly LOG_PREFIX="[PROXMOX_LANDSCAPE_INIT]"
+readonly LOG_PREFIX="[PROXMOX_LANDSCAPE_MANAGE]"
 readonly REQUIRED_BINS=("ansible-playbook" "terraform" "yq")
 readonly CONFIG_FILE="${SCRIPT_DIR}/config.yml"
 readonly ANSIBLE_DIR="${SCRIPT_DIR}/01_ansible_deploy_templates"
@@ -23,7 +23,7 @@ readonly TERRAFORM_DIR="${SCRIPT_DIR}/02_terraform_deploy_guests"
 CURRENT_DIR=""
 
 # === HELP MESSAGE ===
-USAGE="Usage: $SCRIPT_NAME <init | terraform {validate|plan|apply|destroy} | ansible {suse|ubuntu|openwrt}>"
+USAGE="Usage: $SCRIPT_NAME <deploy | manage | destroy | terraform {validate|plan|apply|destroy} | ansible {suse|ubuntu|openwrt}>"
 
 # === LOGGING ===
 log_header() {
@@ -155,10 +155,18 @@ main() {
     load_config_yml "$CONFIG_FILE"
 
     case "$1" in
-        init)
+        deploy)
             log_header "Starting Proxmox Automated Landscape Install"
             run_ansible_playbook "$DEFAULT_ANSIBLE_PLAYBOOK"
             run_terraform_command apply
+            ;;
+        manage)
+            log_header "Starting Proxmox Automated Landscape Management"
+            run_terraform_command apply
+            ;;
+        destroy)
+            log_header "Starting Proxmox Automated Landscape Destroy"
+            run_terraform_command destroy
             ;;
         terraform)
             case "${2:-}" in
