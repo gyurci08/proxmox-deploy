@@ -1,0 +1,23 @@
+- name: Check if image exists
+  stat:
+    path: "{{ DESTINATION_PATH }}"
+  register: image_stat
+
+- name: Download image asynchronously
+  get_url:
+    url: "{{ IMAGE_URL }}"
+    dest: "{{ DESTINATION_PATH }}"
+    mode: '0644'
+  async: "{{ image_download_timeout }}"
+  poll: 0
+  register: download_job
+  when: not image_stat.stat.exists
+
+- name: Wait for image download to finish
+  async_status:
+    jid: "{{ download_job.ansible_job_id }}"
+  register: download_result
+  until: download_result.finished
+  retries: "{{ image_download_retries }}"
+  delay: "{{ image_download_delay }}"
+  when: not image_stat.stat.exists

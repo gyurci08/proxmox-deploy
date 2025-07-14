@@ -1,0 +1,19 @@
+- name: Check Proxmox version and verify installation
+  command: pveversion
+  register: pve_version
+  failed_when: pve_version.rc != 0 or ('pve-manager' not in pve_version.stdout)
+  changed_when: false
+
+- name: Ensure destination directory exists
+  file:
+    path: "/var/lib/vz/template/iso"
+    state: directory
+    mode: '0755'
+
+- name: Install required packages
+  apt:
+    name:
+      - libguestfs-tools
+      - python3-proxmoxer
+    state: present
+    update_cache: yes

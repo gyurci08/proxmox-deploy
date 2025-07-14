@@ -1,0 +1,36 @@
+- name: Copy the original image to a modified version
+  copy:
+    src: "{{ DESTINATION_PATH }}"
+    dest: "{{ DESTINATION_PATH }}.modified"
+    remote_src: yes
+
+- name: Resize the copied image if its size differs from the desired root size
+  shell: |
+    current_size=$(qemu-img info {{ DESTINATION_PATH }}.modified | grep 'virtual size' | awk '{print $3}')
+    if [ "$current_size" != "{{ GUEST.VM_ROOT_SIZE }}" ]; then
+      qemu-img resize -f qcow2 {{ DESTINATION_PATH }}.modified {{ GUEST.VM_ROOT_SIZE }}
+    fi
+  register: resize_result
+  changed_when: resize_result.stdout != ""
+
+- name: Install required packages inside the copied cloud image (skip for OpenWRT)
+  command: >
+    virt-customize -a {{ DESTINATION_PATH }}.modified
+    --install {{ GUEST.PACKAGES | join(",") }}
+    --run-command '{{ PACKAGE_UPDATE_COMMAND }} && {{ PACKAGE_UPGRADE_COMMAND }}'
+  when: GUEST_DISTRIBUTION != 'openwrt'
+
+- name: Set the timezone inside the copied image (skip for OpenWRT)
+  command: >
+    virt-customize -a {{ DESTINATION_PATH }}.modified --timezone "{{ TIMEZONE }}"
+  register: TIMEZONE_RESULT
+  changed_when: TIMEZONE_RESULT.rc == 0
+  when: GUEST_DISTRIBUTION != 'openwrt'
+
+- name: Disable MOTD messages in the image (Ubuntu only)
+  command: >
+    virt-customize -v -a {{ DESTINATION_PATH }}.modified
+    --run-command 'chmod -x /etc/update-motd.d/*'
+    --run-command 'echo "ENABLED=0" > /etc/default/motd-news'
+  ignore_errors: yes
+  when: GUEST_DISTRIBUTION == 'ubuntu'
