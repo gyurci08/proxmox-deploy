@@ -17,7 +17,7 @@ readonly REQUIRED_BINS=("ansible-playbook" "terraform" "yq")
 readonly CONFIG_FILE="${SCRIPT_DIR}/config.yml"
 readonly ANSIBLE_DIR="${SCRIPT_DIR}/01_ansible_deploy_templates"
 readonly DEFAULT_ANSIBLE_PLAYBOOK="playbooks/deploy_vm_template.yml"
-readonly TERRAFORM_DIR="${SCRIPT_DIR}/02_terraform_deploy_vms"
+readonly TERRAFORM_DIR="${SCRIPT_DIR}/02_terraform_deploy_guests"
 
 # === GLOBALS ===
 CURRENT_DIR=""
