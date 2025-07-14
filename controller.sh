@@ -5,7 +5,7 @@ set -Eeuo pipefail
 # Proxmox Landscape Automated Controller Script
 # - Loads config.yml and exports variables as env vars
 # - Runs Ansible and Terraform with centralized config
-# - Supports: init, terraform {validate|plan|apply|destroy}, ansible vms, ansible routers
+# - Supports: init, terraform {validate|plan|apply|destroy}, ansible {suse|ubuntu|openwrt}
 ###############################################################################
 
 # === CONSTANTS ===
@@ -23,7 +23,7 @@ readonly TERRAFORM_DIR="${SCRIPT_DIR}/02_terraform_deploy_vms"
 CURRENT_DIR=""
 
 # === HELP MESSAGE ===
-USAGE="Usage: $SCRIPT_NAME <init | terraform {validate|plan|apply|destroy} | ansible {vms|routers}>"
+USAGE="Usage: $SCRIPT_NAME <init | terraform {validate|plan|apply|destroy} | ansible {suse|ubuntu|openwrt}>"
 
 # === LOGGING ===
 log_header() {
