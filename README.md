@@ -97,7 +97,7 @@ From your project root, run:
   ```bash
   ./controller.sh init
   ./controller.sh terraform plan
-  ./controller.sh ansible vms
+  ./controller.sh ansible suse
   ```
 
 This will:
