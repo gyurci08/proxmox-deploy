@@ -9,11 +9,10 @@ resource "proxmox_vm_qemu" "vm-master" {
   clone             = "template-suse-Leap-15.6"
   memory            = 1024
   agent             = 1
-  automatic_reboot  = false # Enable reboot after terraform changes
-  balloon           = 512
+  automatic_reboot  = true
+  balloon           = 1024
   bios              = "seabios"
   boot              = "order=virtio0"
-  bootdisk          = "virtio0"
   machine           = "q35"
   os_type           = "Linux 5.x - 2.6 Kernel"
   protection        = false
@@ -35,18 +34,20 @@ resource "proxmox_vm_qemu" "vm-master" {
   }
 
   disk {
-    discard  = true
-    iothread = true
-    size     = "10G"
-    slot     = "virtio0"
+    slot     = "ide0"
     storage  = "local-lvm"
-    type     = "disk"
+    type     = "cloudinit"
+    format   = "raw"
   }
 
   disk {
-    slot    = "ide0"
-    storage = "local-lvm"
-    type    = "cloudinit"
+    slot     = "virtio0"
+    storage  = "local-lvm"
+    size     = "10G"
+    type     = "disk"
+    discard  = true
+    iothread = true
+    format   = "raw"
   }
 
   network {
@@ -59,7 +60,7 @@ resource "proxmox_vm_qemu" "vm-master" {
   serial {
     id   = 0
     type = "socket"
-    }
+  }
 }
 
 #####
@@ -73,11 +74,10 @@ resource "proxmox_vm_qemu" "vm-test-1" {
   clone             = "template-suse-Leap-15.6"
   memory            = 1024
   agent             = 1
-  automatic_reboot  = false # Enable reboot after terraform changes
-  balloon           = 512
+  automatic_reboot  = true
+  balloon           = 1024
   bios              = "seabios"
   boot              = "order=virtio0"
-  bootdisk          = "virtio0"
   machine           = "q35"
   os_type           = "Linux 5.x - 2.6 Kernel"
   protection        = false
@@ -99,18 +99,20 @@ resource "proxmox_vm_qemu" "vm-test-1" {
   }
 
   disk {
-    discard  = true
-    iothread = true
-    size     = "10G"
-    slot     = "virtio0"
+    slot     = "ide0"
     storage  = "local-lvm"
-    type     = "disk"
+    type     = "cloudinit"
+    format   = "raw"
   }
 
   disk {
-    slot    = "ide0"
-    storage = "local-lvm"
-    type    = "cloudinit"
+    slot     = "virtio0"
+    storage  = "local-lvm"
+    size     = "10G"
+    type     = "disk"
+    discard  = true
+    iothread = true
+    format   = "raw"
   }
 
   network {
@@ -123,6 +125,5 @@ resource "proxmox_vm_qemu" "vm-test-1" {
   serial {
     id   = 0
     type = "socket"
-    }
+  }
 }
-

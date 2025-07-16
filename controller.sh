@@ -62,14 +62,12 @@ safe_popd() {
 }
 
 cleanup() {
-    [[ -n "$CURRENT_DIR" ]] && {
+    if [[ -n "$CURRENT_DIR" ]]; then
         log_info "Cleaning up: returning to previous directory"
         safe_popd
-    }
+    fi
 }
-
-trap 'log_error "Trapped UNEXPECTED error. Cleaning up & exiting."; cleanup; exit 99' ERR
-trap 'cleanup' EXIT
+trap cleanup EXIT
 
 # --- YAML Config Loader: Supports existing (inherited/env) vars ---
 load_config_yml() {
