@@ -2,63 +2,53 @@
 
 This project enables fully automated Proxmox VM deployment and management using a single command and a centralized configuration file. All environment-specific values are managed in `config.yml`, and the process is orchestrated via the `controller.sh` script.
 
-## 1. Prerequisites
+# 0. Dependencies
 
-**Proxmox User, Role, and API Token Setup**
+This project requires the following tools installed and available in your `PATH`:
 
-Before running the automation, you must create a dedicated Proxmox user, assign a custom role with the necessary privileges, and generate an API token. This ensures secure, least-privilege automation.
+- `ansible`
+- `terraform`
+- `yq` (mikefarah)
 
-**Steps:**
+Please ensure these dependencies are installed before running the `controller.sh` script.
 
-1. **Create a Custom Role**  
-   Assign only the permissions required for VM management and automation:
-   ```bash
-   pveum role add RobotRole -privs "
-      Datastore.AllocateSpace,
-      Datastore.Audit,
-      Pool.Allocate,
-      SDN.Allocate,
-      SDN.Audit,
-      SDN.Use,
-      Sys.Audit,
-      Sys.Console,
-      Sys.Modify,
-      VM.Allocate,
-      VM.Audit,
-      VM.Clone,
-      VM.Config.CDROM,
-      VM.Config.CPU,
-      VM.Config.Cloudinit,
-      VM.Config.Disk,
-      VM.Config.HWType,
-      VM.Config.Memory,
-      VM.Config.Network,
-      VM.Config.Options,
-      VM.Monitor,
-      VM.Migrate,
-      VM.PowerMgmt
-   "
-   ```
+### 1. Robot User Configuration
 
-2. **Create the User**
-   ```bash
-   useradd -m -s /bin/bash -G sudo robot
-   pveum user add robot@pam
-   passwd robot
-   ```
+*Variables*:  
+`VAR_USER=robot`  
+`VAR_ROLE=Robot`
 
-3. **Assign the Role to the User**
-   ```bash
-   pveum aclmod / -user robot@pam -role RobotRole
-   ```
-
-4. **Create an API Token for Automation**
-   ```bash
-   pveum user token add robot@pam automation
-   # Note: Store the displayed token ID and secret securely.
-   ```
-
-*Record these values (API ID, API Key/Secret, username, etc.) in your `config.yml` for use by the automation.*
+```bash
+VAR_USER=robot
+VAR_ROLE=Robot
+pveum role add ${VAR_ROLE} -privs "
+Datastore.AllocateSpace,
+Datastore.Audit,
+Pool.Allocate,
+SDN.Allocate,
+SDN.Audit,
+SDN.Use,
+Sys.Audit,
+Sys.Console,
+Sys.Modify,
+VM.Allocate,
+VM.Audit,
+VM.Clone,
+VM.Config.CDROM,
+VM.Config.CPU,
+VM.Config.Cloudinit,
+VM.Config.Disk,
+VM.Config.HWType,
+VM.Config.Memory,
+VM.Config.Network,
+VM.Config.Options,
+VM.Monitor,
+VM.Migrate,
+VM.PowerMgmt
+"
+useradd -m -s /bin/bash -G sudo ${VAR_USER} && pveum user add ${VAR_USER}@pam && passwd ${VAR_USER}
+pveum aclmod / -user ${VAR_USER}@pam -role ${VAR_ROLE}
+```
 
 ## 2. Centralized Configuration
 
