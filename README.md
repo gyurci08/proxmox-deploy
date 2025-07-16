@@ -1,5 +1,3 @@
-Certainly! Here’s an updated **README** reflecting your new `controller.sh` script with its usage and actual supported commands:
-
 # Proxmox Automated Landscape Install
 
 This project enables fully automated Proxmox VM deployment and management using a single command and a centralized configuration file. All environment-specific values are managed in `config.yml`, and the process is orchestrated via the `controller.sh` script.

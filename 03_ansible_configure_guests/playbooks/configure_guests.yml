@@ -2,10 +2,12 @@
   hosts: master
   become: yes
   gather_facts: no
-  tasks:
+  pre_tasks:
     - name: Wait for SSH to be available on master node
       wait_for_connection:
         timeout: 300
+        delay: 30
+        sleep: 10
   roles:
     - role: master_config
 
@@ -13,9 +15,11 @@
   hosts: minion
   become: yes
   gather_facts: no
-  tasks:
+  pre_tasks:
     - name: Wait for SSH to be available on minion nodes
       wait_for_connection:
         timeout: 300
+        delay: 30
+        sleep: 10
   roles:
     - role: minion_config
