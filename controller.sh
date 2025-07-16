@@ -187,10 +187,12 @@ main() {
             log_header "Starting Proxmox Automated Landscape Install"
             run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK"
             run_terraform_command apply
+            run_ansible_playbook "$ANSIBLE_CONFIGURE_DIR" "$ANSIBLE_CONFIGURE_PLAYBOOK"
             ;;
         manage)
             log_header "Starting Proxmox Automated Landscape Management"
             run_terraform_command apply
+            run_ansible_playbook "$ANSIBLE_CONFIGURE_DIR" "$ANSIBLE_CONFIGURE_PLAYBOOK"
             ;;
         destroy)
             log_header "Starting Proxmox Automated Landscape Destroy"

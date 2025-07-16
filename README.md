@@ -1,42 +1,44 @@
+Certainly! Here’s an updated **README** reflecting your new `controller.sh` script with its usage and actual supported commands:
+
 # Proxmox Automated Landscape Install
 
 This project enables fully automated Proxmox VM deployment and management using a single command and a centralized configuration file. All environment-specific values are managed in `config.yml`, and the process is orchestrated via the `controller.sh` script.
 
 ## 1. Prerequisites
 
-### Proxmox User, Role, and API Token Setup
+**Proxmox User, Role, and API Token Setup**
 
 Before running the automation, you must create a dedicated Proxmox user, assign a custom role with the necessary privileges, and generate an API token. This ensures secure, least-privilege automation.
 
-#### Steps
+**Steps:**
 
 1. **Create a Custom Role**  
    Assign only the permissions required for VM management and automation:
    ```bash
    pveum role add RobotRole -privs "
-     Datastore.AllocateSpace,
-     Datastore.Audit,
-     Pool.Allocate,
-     SDN.Allocate,
-     SDN.Audit,
-     SDN.Use,
-     Sys.Audit,
-     Sys.Console,
-     Sys.Modify,
-     VM.Allocate,
-     VM.Audit,
-     VM.Clone,
-     VM.Config.CDROM,
-     VM.Config.CPU,
-     VM.Config.Cloudinit,
-     VM.Config.Disk,
-     VM.Config.HWType,
-     VM.Config.Memory,
-     VM.Config.Network,
-     VM.Config.Options,
-     VM.Monitor,
-     VM.Migrate,
-     VM.PowerMgmt
+      Datastore.AllocateSpace,
+      Datastore.Audit,
+      Pool.Allocate,
+      SDN.Allocate,
+      SDN.Audit,
+      SDN.Use,
+      Sys.Audit,
+      Sys.Console,
+      Sys.Modify,
+      VM.Allocate,
+      VM.Audit,
+      VM.Clone,
+      VM.Config.CDROM,
+      VM.Config.CPU,
+      VM.Config.Cloudinit,
+      VM.Config.Disk,
+      VM.Config.HWType,
+      VM.Config.Memory,
+      VM.Config.Network,
+      VM.Config.Options,
+      VM.Monitor,
+      VM.Migrate,
+      VM.PowerMgmt
    "
    ```
 
@@ -66,22 +68,31 @@ Edit `config.yml` with your environment details:
 
 ```yaml
 # Proxmox host details
-PROXMOX_NODE: "proxmox-node-1"
-PROXMOX_HOST: "proxmox-node-1.local"
+PROXMOX_NODE: "proxmox"
+PROXMOX_HOST: "proxmox.local"
 PROXMOX_SSH_PORT: "22"
 PROXMOX_USER: "robot"
 PROXMOX_PASSWORD: "12345678"
 PROXMOX_API_ID: "robot@pam!robot"
-PROXMOX_API_KEY: "e123456b-1234-1234-1234-612345678901"
-PROXMOX_SSH_KEY: "/home/user/.ssh/id.proxmox-node-1"
+PROXMOX_API_KEY: "12345678-1234-1234-1234-123456789123"
+PROXMOX_SSH_KEY: "/home/user/.ssh/id-robot"
+
+# OS details
+DISTRIBUTION: "suse" # Available: suse, ubuntu
 
 # Cloud-init details   
-CLOUD_INIT_USER: "admin"
+CLOUD_INIT_USER: "user"
 CLOUD_INIT_PASSWORD: "12345678"
-CLOUD_INIT_SEARCHDOMAIN: "internal.local"
-CLOUD_INIT_NAMESERVER: "192.168.1.254"
+CLOUD_INIT_SEARCHDOMAIN: "local"
+CLOUD_INIT_GATEWAY: "10.0.1.254"
+CLOUD_INIT_NAMESERVER: "10.0.1.254"
+CLOUD_INIT_SSH_KEY: "/home/user/.ssh/id"
 CLOUD_INIT_SSH_PUBLIC_KEYS: |
-  ecdsa-sha2-nistp521 AAAA12345678rVw== user@user-pc
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCasdS53KFrGg6yIcuQ== user
+  
+# Guest configure details
+SALT_MASTER_HOSTNAME: "vm-master"
+SALT_MASTER_IP: "10.0.1.140"
 ```
 
 ## 3. Usage
@@ -89,10 +100,19 @@ CLOUD_INIT_SSH_PUBLIC_KEYS: |
 From your project root, run:
 
 ```bash
-./controller.sh
+./controller.sh 
 ```
 
-All command combinations are covered in a single, concise usage line.
+### Supported Commands
+
+| Command                             | Description                                                                                          |
+|--------------------------------------|------------------------------------------------------------------------------------------------------|
+| `deploy`                            | Prepares Proxmox templates (Ansible), deploys VMs (Terraform), configures guests (Ansible)           |
+| `manage`                            | Applies current Terraform configuration, then configures guests                                      |
+| `destroy`                           | Destroys all Terraform-managed infrastructure                                                        |
+| `terraform validate/plan/apply/destroy` | Run Terraform with the given subcommand                                                           |
+| `ansible deploy`                    | Only prepares Proxmox VM templates with Ansible                                                      |
+| `ansible configure`                 | Only configures guest VMs with Ansible                                                               |
 
 **Examples:**
 ```bash
@@ -100,16 +120,9 @@ All command combinations are covered in a single, concise usage line.
 ./controller.sh manage
 ./controller.sh destroy
 ./controller.sh terraform plan
-./controller.sh ansible suse
+./controller.sh ansible deploy
+./controller.sh ansible configure
 ```
-
-### Supported Commands
-
-- `deploy` – Run Ansible to prepare Proxmox templates, then apply Terraform to deploy VMs.
-- `manage` – Apply the current Terraform configuration (idempotent).
-- `destroy` – Destroy all Terraform-managed infrastructure.
-- `terraform {validate|plan|apply|destroy}` – Run specific Terraform subcommands.
-- `ansible {suse|ubuntu|openwrt}` – Run the Ansible playbook for a specific distribution.
 
 ## 4. Variable Flow
 
@@ -122,9 +135,9 @@ All command combinations are covered in a single, concise usage line.
 ## 5. Best Practices
 
 - **Edit only** `config.yml` to change environment-specific values.
-- **Store secrets** only in `config.yml`; never commit sensitive files to version control.
-- **Check logs:** The script logs each step and errors for easy troubleshooting.
-- **For SSH keys:** You can use multi-line values in `config.yml`.
+- **Store secrets** only in `config.yml`. **Never commit sensitive files to version control.**
+- **Check logs:** The script outputs detailed logs for all steps and errors.
+- **Multi-line SSH keys:** You can use multi-line values in `config.yml`.
 
 ## 6. Troubleshooting
 
@@ -141,4 +154,4 @@ All command combinations are covered in a single, concise usage line.
    ```
 4. **Check Proxmox Web UI** and verify VMs are created and accessible.
 
-This workflow ensures a single source of truth for all automation variables and a reproducible, one-command setup for your Proxmox landscape. Adjust `config.yml` for new environments or credentials as needed.
+**This workflow ensures a single source of truth for all automation variables and a reproducible, one-command setup for your Proxmox landscape. Adjust `config.yml` for new environments or credentials as needed.**

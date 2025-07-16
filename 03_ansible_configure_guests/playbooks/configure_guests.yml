@@ -3,7 +3,7 @@
   become: yes
   gather_facts: no
   tasks:
-    - name: Wait for SSH to be available on master nodes
+    - name: Wait for SSH to be available on master node
       wait_for_connection:
         timeout: 300
   roles:
