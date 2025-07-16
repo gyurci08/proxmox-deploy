@@ -3,12 +3,10 @@ set -Eeuo pipefail
 
 ###############################################################################
 # Proxmox Landscape Automated Controller Script
-# - Loads config.yml and exports variables as env vars
-# - Runs Ansible and Terraform with centralized config
-# - Supports: deploy, manage, destroy, terraform {validate|plan|apply|destroy}, ansible {deploy|configure}
+# Loads config.yml and exports variables as env vars. Integrates Ansible & Terraform flows.
 ###############################################################################
 
-# === CONSTANTS ===
+# --- Constants ---
 readonly SCRIPT_DIR="$(dirname "$(realpath -s "${BASH_SOURCE[0]}")")"
 readonly SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
 readonly CURRENT_DATE="$(date +%Y-%m-%d_%H-%M-%S)"
@@ -21,32 +19,25 @@ readonly ANSIBLE_DEPLOY_PLAYBOOK="playbooks/deploy_vm_template.yml"
 readonly ANSIBLE_CONFIGURE_PLAYBOOK="playbooks/configure_guests.yml"
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/02_terraform_deploy_guests"
 
-# === GLOBALS ===
+# --- Globals ---
 CURRENT_DIR=""
 
-# === HELP MESSAGE ===
-USAGE="Usage: $SCRIPT_NAME <deploy | manage | destroy | terraform {validate|plan|apply|destroy} | ansible {deploy|configure}>"
+readonly USAGE="Usage: $SCRIPT_NAME <deploy|manage|destroy|terraform {validate|plan|apply|destroy}|ansible {deploy|configure}>"
 
-# === LOGGING ===
+# --- Logging ---
 log_header() {
-    printf '\n%*s\n' "${COLUMNS:-50}" '' | tr ' ' '='
+    printf '\n%*s\n' "${COLUMNS:-60}" '' | tr ' ' '='
     echo "${LOG_PREFIX} ➤ $*"
-    printf '%*s\n' "${COLUMNS:-50}" '' | tr ' ' '='
+    printf '%*s\n' "${COLUMNS:-60}" '' | tr ' ' '='
 }
+log_info()   { echo "$(date +"%Y-%m-%dT%H:%M:%S%:z") - [INFO]  ${LOG_PREFIX} $*"; }
+log_error()  { echo "$(date +"%Y-%m-%dT%H:%M:%S%:z") - [ERROR] ${LOG_PREFIX} $*" >&2; }
 
-log_info() {
-    echo "$(date +"%Y-%m-%dT%H:%M:%S%:z") - [INFO] ${LOG_PREFIX} $*"
-}
-
-log_error() {
-    echo "$(date +"%Y-%m-%dT%H:%M:%S%:z") - [ERROR] ${LOG_PREFIX} $*" >&2
-}
-
-# === UTILS ===
+# --- Utility Functions ---
 validate_binaries() {
     for bin in "${REQUIRED_BINS[@]}"; do
         if ! command -v "$bin" &>/dev/null; then
-            log_error "Required binary '$bin' is not installed or not in PATH"
+            log_error "Required binary '$bin' is not installed or not in PATH."
             exit 1
         fi
     done
@@ -54,76 +45,72 @@ validate_binaries() {
 
 safe_pushd() {
     if ! pushd "$1" > /dev/null; then
-        log_error "Failed to change directory to $1"
+        log_error "Failed to cd to $1"
         exit 10
     fi
     CURRENT_DIR="$1"
 }
 
 safe_popd() {
-    if ! popd > /dev/null; then
-        log_error "Failed to return to previous directory"
-        exit 11
+    if [[ -n "$CURRENT_DIR" ]]; then
+        if ! popd > /dev/null; then
+            log_error "Failed to popd from $CURRENT_DIR"
+            exit 11
+        fi
+        CURRENT_DIR=""
     fi
-    CURRENT_DIR=""
 }
 
 cleanup() {
-    if [[ -n "$CURRENT_DIR" ]]; then
-        log_info "Cleaning up: returning to original directory"
+    [[ -n "$CURRENT_DIR" ]] && {
+        log_info "Cleaning up: returning to previous directory"
         safe_popd
-    fi
+    }
 }
 
-trap 'log_error "An unexpected error occurred. Exiting."; cleanup' ERR
+trap 'log_error "Trapped UNEXPECTED error. Cleaning up & exiting."; cleanup; exit 99' ERR
 trap 'cleanup' EXIT
 
-# === CONFIG LOADING ===
+# --- YAML Config Loader: Supports existing (inherited/env) vars ---
 load_config_yml() {
-    local config_file="$1"
-    local key value tf_key
+    local config_file="$1" key value tf_key
     while IFS= read -r key; do
-        if [[ $(yq e ".\"$key\" | type" "$config_file") == "!!seq" ]]; then
-            value=$(yq -r ".\"$key\"[]" "$config_file" | paste -sd $'\n' -)
-        else
-            value=$(yq -r ".\"$key\"" "$config_file")
+        # skip if already set as env or exported
+        if [[ -z "${!key:-}" ]]; then
+            if [[ $(yq e ".\"$key\" | type" "$config_file") == "!!seq" ]]; then
+                value=$(yq -r ".\"$key\"[]" "$config_file" | paste -sd $'\n' -)
+            else
+                value=$(yq -r ".\"$key\"" "$config_file")
+            fi
+            export "$key"="$value"
+            tf_key="TF_VAR_$(echo "$key" | tr '[:upper:]' '[:lower:]')"
+            export "$tf_key"="$value"
         fi
-        export "$key=$value"
-        tf_key="TF_VAR_$(echo "$key" | tr '[:upper:]' '[:lower:]')"
-        export "$tf_key=$value"
     done < <(yq e 'keys | .[]' "$config_file")
 }
 
-# === SSH HOSTKEY CLEANUP ===
 clear_vm_ssh_hostkeys() {
-    log_info "Removing stale SSH host keys for VMs to avoid 'REMOTE HOST IDENTIFICATION HAS CHANGED' errors..."
+    log_info "Removing stale SSH host keys for VMs..."
     local tf_file="${TERRAFORM_DIR}/main.tf"
-    if [[ ! -f "$tf_file" ]]; then
-        log_error "Terraform main.tf not found at $tf_file, skipping SSH host key cleanup."
-        return
-    fi
-    local iplist
-    iplist=$(grep ipconfig0 "$tf_file" | sed -nE 's/.*ipconfig0 *= *"ip=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\/.*/\1/p' | sort | uniq)
-    for ip in $iplist; do
-        if [[ -n "$ip" ]]; then
+    [[ ! -f "$tf_file" ]] && { log_error "Terraform main.tf not found. Skipping SSH host key cleanup."; return; }
+    grep ipconfig0 "$tf_file" | sed -nE 's/.*ipconfig0 *= *"ip=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\/.*/\1/p' \
+        | sort -u | while read -r ip; do
+        [[ -n "$ip" ]] && {
             log_info "Removing known_hosts entry for $ip"
             ssh-keygen -f "$HOME/.ssh/known_hosts" -R "$ip" >/dev/null 2>&1 || true
-        fi
+        }
     done
 }
 
-# === RUNNERS ===
+# --- Task Runners ---
+
 run_ansible_playbook() {
     local playbook_dir="$1"
     local playbook="$2"
     log_info "Changing directory to $playbook_dir"
     safe_pushd "$playbook_dir"
-    log_info "Running Ansible playbook with SSH host key checking disabled: $playbook"
-    if ! ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook "$playbook"; then
-        log_error "Ansible playbook failed. Exiting."
-        safe_popd
-        exit 2
-    fi
+    log_info "Running Ansible playbook: $playbook"
+    ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook "$playbook"
     safe_popd
 }
 
@@ -132,95 +119,67 @@ run_terraform_command() {
     log_info "Changing directory to $TERRAFORM_DIR"
     safe_pushd "$TERRAFORM_DIR"
     log_info "Initializing Terraform"
-    if ! terraform init; then
-        log_error "Terraform init failed. Exiting."
-        safe_popd
-        exit 3
-    fi
-
+    terraform init
     case "$subcommand" in
-        validate)
-            log_info "Validating Terraform configuration"
-            terraform validate
-            ;;
-        plan)
-            log_info "Planning Terraform changes"
-            terraform plan
-            ;;
-        apply)
-            log_info "Applying Terraform plan"
-            terraform apply -auto-approve
-            ;;
-        destroy)
-            log_info "Destroying Terraform-managed infrastructure"
-            terraform destroy -auto-approve
-            ;;
-        *)
-            echo "$USAGE"
-            safe_popd
-            exit 1
-            ;;
+      validate)  log_info "Validating Terraform configuration"; terraform validate ;;
+      plan)      log_info "Planning Terraform changes"; terraform plan ;;
+      apply)     log_info "Applying Terraform plan"; terraform apply -auto-approve ;;
+      destroy)   log_info "Destroying Terraform-managed infrastructure"; terraform destroy -auto-approve ;;
+      *)         echo "$USAGE"; safe_popd; exit 1 ;;
     esac
     safe_popd
 }
 
-# === MAIN ===
+# --- Main Dispatcher ---
 main() {
-    if [[ $# -lt 1 ]]; then
-        echo "$USAGE"
-        exit 1
-    fi
+    [[ $# -lt 1 ]] && { echo "$USAGE"; exit 1; }
 
     validate_binaries
-    clear_vm_ssh_hostkeys     # Remove SSH keys before any orchestration
+    clear_vm_ssh_hostkeys
 
-    if [[ ! -f "$CONFIG_FILE" ]]; then
-        log_error "Config file $CONFIG_FILE not found!"
-        exit 1
-    fi
-
+    [[ ! -f "$CONFIG_FILE" ]] && { log_error "Config file $CONFIG_FILE not found!"; exit 1; }
     log_info "Loading config from $CONFIG_FILE"
     load_config_yml "$CONFIG_FILE"
 
     case "$1" in
         deploy)
-            log_header "Starting Proxmox Automated Landscape Install"
+            log_header "Proxmox Automated Landscape Install"
+            # Deploy OpenWrt template
+            DISTRIBUTION="openwrt" run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK"
+            # Deploy Guest template
             run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK"
+            # Deploy vms
             run_terraform_command apply
+            # Configure SALT
             run_ansible_playbook "$ANSIBLE_CONFIGURE_DIR" "$ANSIBLE_CONFIGURE_PLAYBOOK"
             ;;
         manage)
-            log_header "Starting Proxmox Automated Landscape Management"
+            log_header "Proxmox Automated Landscape Management"
+            # Deploy vms
             run_terraform_command apply
+            # Configure SALT
             run_ansible_playbook "$ANSIBLE_CONFIGURE_DIR" "$ANSIBLE_CONFIGURE_PLAYBOOK"
             ;;
         destroy)
-            log_header "Starting Proxmox Automated Landscape Destroy"
+            log_header "Proxmox Automated Landscape Destroy"
             run_terraform_command destroy
             ;;
         terraform)
             case "${2:-}" in
-                validate|plan|apply|destroy)
-                    run_terraform_command "$2"
-                    ;;
-                *)
-                    echo "$USAGE"
-                    exit 1
-                    ;;
+                validate|plan|apply|destroy) run_terraform_command "$2" ;;
+                *) echo "$USAGE"; exit 1 ;;
             esac
             ;;
         ansible)
             case "${2:-}" in
                 deploy)
-                    run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK"
+                    run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK" 
+                    DISTRIBUTION="openwrt" run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK"
                     ;;
-                configure)
+                configure) 
                     run_ansible_playbook "$ANSIBLE_CONFIGURE_DIR" "$ANSIBLE_CONFIGURE_PLAYBOOK"
                     ;;
-                *)
-                    echo "$USAGE"
-                    exit 1
-                    ;;
+                *) echo "$USAGE"; exit 1 ;;
             esac
             ;;
         *)
@@ -231,8 +190,8 @@ main() {
     esac
 
     log_header "Setup complete! Check Proxmox Web UI and SSH access to your VM."
-    log_info "Date: $CURRENT_DATE"
-    log_info "Script: $SCRIPT_NAME"
+    log_info   "Date: $CURRENT_DATE"
+    log_info   "Script: $SCRIPT_NAME"
 }
 
 main "$@"

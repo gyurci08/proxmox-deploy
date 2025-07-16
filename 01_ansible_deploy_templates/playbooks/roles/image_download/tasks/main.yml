@@ -24,7 +24,7 @@
 
 - name: Show image URL before downloading
   ansible.builtin.debug:
-    msg: "Downloading OpenWRT image from: {{ IMAGE_URL }}"
+    msg: "Downloading image from: {{ IMAGE_URL }}"
   when: need_download
 
 - name: Download image asynchronously if needed
@@ -68,11 +68,11 @@
     gzip_result.rc != 0 and
     ('trailing garbage ignored' not in gzip_result.stderr)
 
-# - name: Remove compressed file after extraction
-#   file:
-#     path: "{{ download_path }}"
-#     state: absent
-#   when:
-#     - extracted_image_exists
-#     - compressed_image_exists
-#     - download_path != DESTINATION_PATH
+- name: Remove compressed file after extraction
+  file:
+    path: "{{ download_path }}"
+    state: absent
+  when:
+    - extracted_image_exists
+    - compressed_image_exists
+    - download_path != DESTINATION_PATH

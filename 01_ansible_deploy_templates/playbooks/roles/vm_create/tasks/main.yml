@@ -50,19 +50,19 @@
   args:
     creates: "/var/lib/vz/images/{{ vm_vmid }}/vm-{{ vm_vmid }}-disk-0.raw"
 
-- name: Create temporary SSH key file (skip for ROUTERS)
+- name: Create temporary SSH key file
   copy:
     content: "{{ CLOUD_INIT_SSH_PUBLIC_KEYS }}"
     dest: "/tmp/ssh_key_{{ vm_vmid }}.pub"
     mode: '0600'
   when: DISTRIBUTION != 'openwrt'
 
-- name: Set cloud-init configurations (skip for ROUTERS)
+- name: Set cloud-init configurations
   shell: |
     qm set {{ vm_vmid }} --ciuser {{ CLOUD_INIT_USER }} --cipassword {{ CLOUD_INIT_PASSWORD }} --sshkeys "/tmp/ssh_key_{{ vm_vmid }}.pub" --ciupgrade 0 --ipconfig0 'ip=dhcp' --ipconfig1 '' --searchdomain "{{ CLOUD_INIT_SEARCHDOMAIN }}" --nameserver "{{ CLOUD_INIT_NAMESERVER }}"
   when: DISTRIBUTION != 'openwrt'
 
-- name: Remove temporary SSH key file (skip for ROUTERS)
+- name: Remove temporary SSH key file
   file:
     path: "/tmp/ssh_key_{{ vm_vmid }}.pub"
     state: absent

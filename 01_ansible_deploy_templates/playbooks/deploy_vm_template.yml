@@ -2,10 +2,6 @@
 - name: Proxmox Cloud Image VM Template Provisioning (Environment)
   hosts: localhost
   gather_facts: false
-  vars:
-    image_download_timeout: 600
-    image_download_retries: 30
-    image_download_delay: 10
   roles:
     - role: env_validation
 

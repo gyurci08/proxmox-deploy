@@ -19,14 +19,14 @@
   register: resize_result
   changed_when: resize_result.stdout != ""
 
-- name: Install required packages inside the copied cloud image (skip for ROUTERS)
+- name: Install required packages inside the copied cloud image
   command: >
     virt-customize -a {{ DESTINATION_PATH }}.modified
     --install {{ vm_packages | join(",") }}
     --run-command '{{ PACKAGE_UPDATE_COMMAND }} && {{ PACKAGE_UPGRADE_COMMAND }}'
   when: DISTRIBUTION != 'openwrt'
 
-- name: Set the timezone inside the copied image (skip for ROUTERS)
+- name: Set the timezone inside the copied image
   command: >
     virt-customize -a {{ DESTINATION_PATH }}.modified --timezone "{{ TIMEZONE }}"
   register: TIMEZONE_RESULT
