@@ -1,0 +1,16 @@
+# ===========================
+# Deployed Guests Config
+# ===========================
+
+# --- VM Definitions ---
+DISTRIBUTION:              "{{ lookup('env', 'DISTRIBUTION') }}"
+
+# Cloud-init details
+CLOUD_INIT_USER:           "{{ lookup('env', 'CLOUD_INIT_USER') }}"
+CLOUD_INIT_PASSWORD:       "{{ lookup('env', 'CLOUD_INIT_PASSWORD') }}"
+CLOUD_INIT_SEARCHDOMAIN:   "{{ lookup('env', 'CLOUD_INIT_SEARCHDOMAIN') }}"
+CLOUD_INIT_SSH_KEY:        "{{ lookup('env', 'CLOUD_INIT_SSH_KEY') }}"
+
+# Configure details
+SALT_MASTER_HOSTNAME:      "{{ lookup('env', 'SALT_MASTER_HOSTNAME') }}.{{ lookup('env', 'CLOUD_INIT_SEARCHDOMAIN') }}"
+SALT_MASTER_IP:            "{{ lookup('env', 'SALT_MASTER_IP') }}"

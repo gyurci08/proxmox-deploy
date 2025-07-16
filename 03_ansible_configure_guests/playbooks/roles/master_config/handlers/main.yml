@@ -1,0 +1,4 @@
+- name: Restart salt-master
+  systemd:
+    name: salt-master
+    state: restarted

@@ -5,7 +5,7 @@ set -Eeuo pipefail
 # Proxmox Landscape Automated Controller Script
 # - Loads config.yml and exports variables as env vars
 # - Runs Ansible and Terraform with centralized config
-# - Supports: deploy, manage, destroy, terraform {validate|plan|apply|destroy}, ansible {suse|ubuntu|openwrt}
+# - Supports: deploy, manage, destroy, terraform {validate|plan|apply|destroy}, ansible {deploy|configure}
 ###############################################################################
 
 # === CONSTANTS ===
@@ -15,15 +15,17 @@ readonly CURRENT_DATE="$(date +%Y-%m-%d_%H-%M-%S)"
 readonly LOG_PREFIX="[PROXMOX_LANDSCAPE_MANAGE]"
 readonly REQUIRED_BINS=("ansible-playbook" "terraform" "yq")
 readonly CONFIG_FILE="${SCRIPT_DIR}/config.yml"
-readonly ANSIBLE_DIR="${SCRIPT_DIR}/01_ansible_deploy_templates"
-readonly DEFAULT_ANSIBLE_PLAYBOOK="playbooks/deploy_vm_template.yml"
+readonly ANSIBLE_DEPLOY_DIR="${SCRIPT_DIR}/01_ansible_deploy_templates"
+readonly ANSIBLE_CONFIGURE_DIR="${SCRIPT_DIR}/03_ansible_configure_guests"
+readonly ANSIBLE_DEPLOY_PLAYBOOK="playbooks/deploy_vm_template.yml"
+readonly ANSIBLE_CONFIGURE_PLAYBOOK="playbooks/configure_guests.yml"
 readonly TERRAFORM_DIR="${SCRIPT_DIR}/02_terraform_deploy_guests"
 
 # === GLOBALS ===
 CURRENT_DIR=""
 
 # === HELP MESSAGE ===
-USAGE="Usage: $SCRIPT_NAME <deploy | manage | destroy | terraform {validate|plan|apply|destroy} | ansible {suse|ubuntu|openwrt}>"
+USAGE="Usage: $SCRIPT_NAME <deploy | manage | destroy | terraform {validate|plan|apply|destroy} | ansible {deploy|configure}>"
 
 # === LOGGING ===
 log_header() {
@@ -94,11 +96,26 @@ load_config_yml() {
 
 # === RUNNERS ===
 run_ansible_playbook() {
-    local playbook="$1"
-    log_info "Changing directory to $ANSIBLE_DIR"
-    safe_pushd "$ANSIBLE_DIR"
+    local playbook_dir="$1"
+    local playbook="$2"
+    log_info "Changing directory to $playbook_dir"
+    safe_pushd "$playbook_dir"
     log_info "Running Ansible playbook: $playbook"
     if ! ansible-playbook "$playbook"; then
+        log_error "Ansible playbook failed. Exiting."
+        safe_popd
+        exit 2
+    fi
+    safe_popd
+}
+
+run_ansible_playbook_nohostkey() {
+    local playbook_dir="$1"
+    local playbook="$2"
+    log_info "Changing directory to $playbook_dir"
+    safe_pushd "$playbook_dir"
+    log_info "Running Ansible playbook (host key checking disabled): $playbook"
+    if ! ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook "$playbook"; then
         log_error "Ansible playbook failed. Exiting."
         safe_popd
         exit 2
@@ -157,7 +174,7 @@ main() {
     case "$1" in
         deploy)
             log_header "Starting Proxmox Automated Landscape Install"
-            run_ansible_playbook "$DEFAULT_ANSIBLE_PLAYBOOK"
+            run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK"
             run_terraform_command apply
             ;;
         manage)
@@ -181,17 +198,11 @@ main() {
             ;;
         ansible)
             case "${2:-}" in
-                suse)
-                    sed -i -E "s/^(DISTRIBUTION: \")[^\"]*(\")/\1suse\2/" "${ANSIBLE_DIR}/group_vars/all/proxmox.yml"
-                    run_ansible_playbook "$DEFAULT_ANSIBLE_PLAYBOOK"
+                deploy)
+                    run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK"
                     ;;
-                ubuntu)
-                    sed -i -E "s/^(DISTRIBUTION: \")[^\"]*(\")/\1ubuntu\2/" "${ANSIBLE_DIR}/group_vars/all/proxmox.yml"
-                    run_ansible_playbook "$DEFAULT_ANSIBLE_PLAYBOOK"
-                    ;;
-                openwrt)
-                    sed -i -E "s/^(DISTRIBUTION: \")[^\"]*(\")/\1openwrt\2/" "${ANSIBLE_DIR}/group_vars/all/proxmox.yml"
-                    run_ansible_playbook "$DEFAULT_ANSIBLE_PLAYBOOK"
+                configure)
+                    run_ansible_playbook_nohostkey "$ANSIBLE_CONFIGURE_DIR" "$ANSIBLE_CONFIGURE_PLAYBOOK"
                     ;;
                 *)
                     echo "$USAGE"

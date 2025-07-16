@@ -1,0 +1,28 @@
+- name: Install salt-master on Ubuntu
+  apt:
+    name: salt-master
+    state: present
+    update_cache: yes
+  when: DISTRIBUTION == 'ubuntu'
+
+- name: Install salt-master on openSUSE
+  zypper:
+    name: salt-master
+    state: present
+    update_cache: yes
+  when: DISTRIBUTION == 'suse'
+
+- name: Ensure salt-master is enabled and started
+  systemd:
+    name: salt-master
+    enabled: yes
+    state: started
+
+- name: Enable auto_accept of minion keys
+  lineinfile:
+    path: /etc/salt/master
+    regexp: '^#?auto_accept:'
+    line: 'auto_accept: True'
+    state: present
+    backup: yes
+  notify: Restart salt-master

@@ -1,0 +1,27 @@
+- name: Install salt-minion on Ubuntu
+  apt:
+    name: salt-minion
+    state: present
+    update_cache: yes
+  when: DISTRIBUTION == 'ubuntu'
+
+- name: Install salt-minion on openSUSE
+  zypper:
+    name: salt-minion
+    state: present
+    update_cache: yes
+  when: DISTRIBUTION == 'suse'
+
+- name: Configure salt minion master from env
+  lineinfile:
+    path: /etc/salt/minion
+    regexp: '^#?master:'
+    line: "master: {{ lookup('env', 'SALT_MASTER_HOSTNAME') }}"
+    state: present
+    backup: yes
+
+- name: Enable and start salt-minion
+  systemd:
+    name: salt-minion
+    enabled: yes
+    state: started
