@@ -3,7 +3,7 @@
 #####
 resource "proxmox_vm_qemu" "vm-master" {
   vmid              = 100
-  name              = "vm-master"
+  name              = var.salt_master_hostname
   desc              = "The SALT master vm"
   target_node       = var.proxmox_node
   clone             = "template-suse-Leap-15.6"
@@ -18,6 +18,7 @@ resource "proxmox_vm_qemu" "vm-master" {
   os_type           = "Linux 5.x - 2.6 Kernel"
   protection        = false
   scsihw            = "virtio-scsi-pci"
+  onboot            = true
 
   # Cloud-init settings
   ciuser            = var.cloud_init_user
@@ -25,7 +26,7 @@ resource "proxmox_vm_qemu" "vm-master" {
   searchdomain      = var.cloud_init_searchdomain
   nameserver        = var.cloud_init_nameserver
   sshkeys           = var.cloud_init_ssh_public_keys
-  ipconfig0         = "ip=10.0.1.140/24,gw=10.0.1.254"
+  ipconfig0         = "ip=${var.salt_master_ip}/24,gw=${var.cloud_init_gateway}"
 
   cpu {
     cores   = 2
@@ -81,6 +82,7 @@ resource "proxmox_vm_qemu" "vm-test-1" {
   os_type           = "Linux 5.x - 2.6 Kernel"
   protection        = false
   scsihw            = "virtio-scsi-pci"
+  onboot            = true
 
   # Cloud-init settings
   ciuser            = var.cloud_init_user
@@ -88,7 +90,7 @@ resource "proxmox_vm_qemu" "vm-test-1" {
   searchdomain      = var.cloud_init_searchdomain
   nameserver        = var.cloud_init_nameserver
   sshkeys           = var.cloud_init_ssh_public_keys
-  ipconfig0         = "ip=10.0.1.141/24,gw=10.0.1.254"
+  ipconfig0         = "ip=10.0.1.141/24,gw=${var.cloud_init_gateway}"
 
   cpu {
     cores   = 2

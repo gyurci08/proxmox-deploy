@@ -94,27 +94,31 @@ load_config_yml() {
     done < <(yq e 'keys | .[]' "$config_file")
 }
 
+# === SSH HOSTKEY CLEANUP ===
+clear_vm_ssh_hostkeys() {
+    log_info "Removing stale SSH host keys for VMs to avoid 'REMOTE HOST IDENTIFICATION HAS CHANGED' errors..."
+    local tf_file="${TERRAFORM_DIR}/main.tf"
+    if [[ ! -f "$tf_file" ]]; then
+        log_error "Terraform main.tf not found at $tf_file, skipping SSH host key cleanup."
+        return
+    fi
+    local iplist
+    iplist=$(grep ipconfig0 "$tf_file" | sed -nE 's/.*ipconfig0 *= *"ip=([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+)\/.*/\1/p' | sort | uniq)
+    for ip in $iplist; do
+        if [[ -n "$ip" ]]; then
+            log_info "Removing known_hosts entry for $ip"
+            ssh-keygen -f "$HOME/.ssh/known_hosts" -R "$ip" >/dev/null 2>&1 || true
+        fi
+    done
+}
+
 # === RUNNERS ===
 run_ansible_playbook() {
     local playbook_dir="$1"
     local playbook="$2"
     log_info "Changing directory to $playbook_dir"
     safe_pushd "$playbook_dir"
-    log_info "Running Ansible playbook: $playbook"
-    if ! ansible-playbook "$playbook"; then
-        log_error "Ansible playbook failed. Exiting."
-        safe_popd
-        exit 2
-    fi
-    safe_popd
-}
-
-run_ansible_playbook_nohostkey() {
-    local playbook_dir="$1"
-    local playbook="$2"
-    log_info "Changing directory to $playbook_dir"
-    safe_pushd "$playbook_dir"
-    log_info "Running Ansible playbook (host key checking disabled): $playbook"
+    log_info "Running Ansible playbook with SSH host key checking disabled: $playbook"
     if ! ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook "$playbook"; then
         log_error "Ansible playbook failed. Exiting."
         safe_popd
@@ -168,6 +172,13 @@ main() {
     fi
 
     validate_binaries
+    clear_vm_ssh_hostkeys     # Remove SSH keys before any orchestration
+
+    if [[ ! -f "$CONFIG_FILE" ]]; then
+        log_error "Config file $CONFIG_FILE not found!"
+        exit 1
+    fi
+
     log_info "Loading config from $CONFIG_FILE"
     load_config_yml "$CONFIG_FILE"
 
@@ -202,7 +213,7 @@ main() {
                     run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK"
                     ;;
                 configure)
-                    run_ansible_playbook_nohostkey "$ANSIBLE_CONFIGURE_DIR" "$ANSIBLE_CONFIGURE_PLAYBOOK"
+                    run_ansible_playbook "$ANSIBLE_CONFIGURE_DIR" "$ANSIBLE_CONFIGURE_PLAYBOOK"
                     ;;
                 *)
                     echo "$USAGE"

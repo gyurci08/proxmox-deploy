@@ -1,18 +1,26 @@
 # Proxmox host details
-PROXMOX_NODE: "proxmox-node-1"
-PROXMOX_HOST: "proxmox-node-1.local"
+PROXMOX_NODE: "proxmox"
+PROXMOX_HOST: "proxmox.local"
 PROXMOX_SSH_PORT: "22"
 PROXMOX_USER: "robot"
 PROXMOX_PASSWORD: "12345678"
 PROXMOX_API_ID: "robot@pam!robot"
-PROXMOX_API_KEY: "e123456b-1234-1234-1234-612345678901"
-PROXMOX_SSH_KEY: "/home/user/.ssh/id.proxmox-node-1"
+PROXMOX_API_KEY: "12345678-1234-1234-1234-123456789123"
+PROXMOX_SSH_KEY: "/home/user/.ssh/id-robot"
+
+# OS details
+DISTRIBUTION: "suse" # Available: suse, ubuntu
 
 # Cloud-init details   
-CLOUD_INIT_USER: "admin"
+CLOUD_INIT_USER: "user"
 CLOUD_INIT_PASSWORD: "12345678"
-CLOUD_INIT_SEARCHDOMAIN: "internal.local"
-CLOUD_INIT_NAMESERVER: "192.168.1.254"
+CLOUD_INIT_SEARCHDOMAIN: "local"
+CLOUD_INIT_GATEWAY: "10.0.1.254"
+CLOUD_INIT_NAMESERVER: "10.0.1.254"
+CLOUD_INIT_SSH_KEY: "/home/user/.ssh/id"
 CLOUD_INIT_SSH_PUBLIC_KEYS: |
-  ecdsa-sha2-nistp521 AAAA12345678rVw== user@user-pc
-  ecdsa-sha2-nistp521 AAAA12345678rVw== user2@use2-pc
+  ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCasdS53KFrGg6yIcuQ== user
+  
+# Guest configure details
+SALT_MASTER_HOSTNAME: "vm-master"
+SALT_MASTER_IP: "10.0.1.140"

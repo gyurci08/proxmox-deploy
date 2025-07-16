@@ -56,6 +56,11 @@ variable "cloud_init_searchdomain" {
   type        = string
 }
 
+variable "cloud_init_gateway" {
+  description = "Cloud-init gateway"
+  type        = string
+}
+
 variable "cloud_init_nameserver" {
   description = "Cloud-init nameserver"
   type        = string
@@ -63,5 +68,15 @@ variable "cloud_init_nameserver" {
 
 variable "cloud_init_ssh_public_keys" {
   description = "SSH public keys"
+  type        = string
+}
+
+variable "salt_master_hostname" {
+  description = "The hostname of the SALT master"
+  type        = string
+}
+
+variable "salt_master_ip" {
+  description = "The ip address of the SALT master"
   type        = string
 }

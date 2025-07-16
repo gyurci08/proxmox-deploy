@@ -6,10 +6,6 @@
     - name: Wait for SSH to be available on master nodes
       wait_for_connection:
         timeout: 300
-
-    - name: Gather facts
-      setup:
-
   roles:
     - role: master_config
 
@@ -21,9 +17,5 @@
     - name: Wait for SSH to be available on minion nodes
       wait_for_connection:
         timeout: 300
-
-    - name: Gather facts
-      setup:
-
   roles:
     - role: minion_config
