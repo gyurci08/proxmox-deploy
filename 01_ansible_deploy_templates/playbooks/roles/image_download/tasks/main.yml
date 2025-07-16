@@ -1,3 +1,7 @@
+- name: Show DISTRIBUTION variable
+  ansible.builtin.debug:
+    msg: "Current distribution: {{ DISTRIBUTION | default('NOT SET') }}"
+    
 - name: Extract extension from IMAGE_URL
   set_fact:
     image_extension: "{{ IMAGE_URL | regex_search('\\.(tar\\.gz|tgz|tar|zip|gz|img)$') | default('') }}"

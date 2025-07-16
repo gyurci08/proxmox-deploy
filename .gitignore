@@ -1,6 +1,6 @@
 vault*
 secret*
-*.tfstate
+*.tfstate*
 *.backup
 *.hcl
 .terraform/
