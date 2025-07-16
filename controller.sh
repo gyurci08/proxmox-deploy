@@ -173,8 +173,8 @@ main() {
         ansible)
             case "${2:-}" in
                 deploy)
-                    run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK" 
                     DISTRIBUTION="openwrt" run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK"
+                    run_ansible_playbook "$ANSIBLE_DEPLOY_DIR" "$ANSIBLE_DEPLOY_PLAYBOOK" 
                     ;;
                 configure) 
                     run_ansible_playbook "$ANSIBLE_CONFIGURE_DIR" "$ANSIBLE_CONFIGURE_PLAYBOOK"
