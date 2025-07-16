@@ -2,9 +2,9 @@
 
 This project enables fully automated Proxmox VM deployment and management using a single command and a centralized configuration file. All environment-specific values are managed in `config.yml`, and the process is orchestrated via the `controller.sh` script.
 
-# 0. Dependencies
+### 0. Dependencies
 
-This project requires the following tools installed and available in your `PATH`:
+This project requires the following tools installed:
 
 - `ansible`
 - `terraform`
