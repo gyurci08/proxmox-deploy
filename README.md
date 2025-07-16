@@ -14,9 +14,8 @@ Please ensure these dependencies are installed before running the `controller.sh
 
 ### 1. Robot User Configuration
 
-*Variables*:  
-`VAR_USER=robot`  
-`VAR_ROLE=Robot`
+
+1. **Create a Role and a User** 
 
 ```bash
 VAR_USER=robot
@@ -48,6 +47,12 @@ VM.PowerMgmt
 "
 useradd -m -s /bin/bash -G sudo ${VAR_USER} && pveum user add ${VAR_USER}@pam && passwd ${VAR_USER}
 pveum aclmod / -user ${VAR_USER}@pam -role ${VAR_ROLE}
+```
+
+2. **Create an API Token for the user**
+
+```bash
+pveum user token add robot@pam automation
 ```
 
 ## 2. Centralized Configuration
